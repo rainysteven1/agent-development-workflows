@@ -1,0 +1,4 @@
+interface:
+  display_name: "Experiment Lab"
+  short_description: "Plan and track research experiments"
+  default_prompt: "Use -lab to design this experiment and organize the runs and comparisons."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Existing Project"
+  short_description: "Recover intent from unfamiliar repos"
+  default_prompt: "Use -project to map this codebase before changing behavior."

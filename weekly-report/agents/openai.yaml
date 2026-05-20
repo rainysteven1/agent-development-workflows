@@ -1,0 +1,4 @@
+interface:
+  display_name: "Weekly Report"
+  short_description: "Summarize weekly work from commits"
+  default_prompt: "Use -report to turn recent commits into a concise weekly report."

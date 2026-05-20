@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pptx"
+  short_description: "Handle native PPTX workflows and QA"
+  default_prompt: "Use  to inspect, edit, or QA this PowerPoint artifact directly."

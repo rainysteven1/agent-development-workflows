@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plotting"
+  short_description: "Create publication-quality figures"
+  default_prompt: "Use  to design a publication-quality figure around this result."

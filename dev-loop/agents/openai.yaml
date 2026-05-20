@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Loop"
+  short_description: "Drive implementation and verification loops"
+  default_prompt: "Use -loop to implement this task and verify it before reporting back."

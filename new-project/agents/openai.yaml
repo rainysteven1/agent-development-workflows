@@ -1,0 +1,4 @@
+interface:
+  display_name: "New Project"
+  short_description: "Plan and scaffold greenfield repos"
+  default_prompt: "Use -project to scope and scaffold the first slice of this project."

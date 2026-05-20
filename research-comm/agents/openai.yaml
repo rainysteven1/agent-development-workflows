@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Comm"
+  short_description: "Prepare focused research updates"
+  default_prompt: "Use -comm to extract the discussion points that matter for this meeting or update."

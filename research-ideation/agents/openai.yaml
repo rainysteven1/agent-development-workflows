@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Ideation"
+  short_description: "Turn research hunches into hypotheses"
+  default_prompt: "Use -ideation to turn this research idea into a testable hypothesis and validation plan."

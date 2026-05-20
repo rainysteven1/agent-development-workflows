@@ -1,0 +1,4 @@
+interface:
+  display_name: "Guide"
+  short_description: "Brief repo workflow and local rules"
+  default_prompt: "Use  to summarize how this repo is supposed to be worked in before we start."

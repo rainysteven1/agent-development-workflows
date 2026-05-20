@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slidecraft"
+  short_description: "Build and diagnose academic decks"
+  default_prompt: "Use  to implement or debug this academic deck with clear slide structure and review passes."

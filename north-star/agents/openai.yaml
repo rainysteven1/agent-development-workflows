@@ -1,0 +1,4 @@
+interface:
+  display_name: "North Star"
+  short_description: "Define measurable project objectives"
+  default_prompt: "Use -star to identify the 1-3 objectives this project should optimize for."

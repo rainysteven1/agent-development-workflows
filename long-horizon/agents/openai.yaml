@@ -1,0 +1,4 @@
+interface:
+  display_name: "Long Horizon"
+  short_description: "Run longer tasks with fewer interrupts"
+  default_prompt: "Use -horizon to make progress autonomously and escalate only the real decision points."

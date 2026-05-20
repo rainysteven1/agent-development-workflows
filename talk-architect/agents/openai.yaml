@@ -1,0 +1,4 @@
+interface:
+  display_name: "Talk Architect"
+  short_description: "Plan the talk before slides"
+  default_prompt: "Use -architect to turn these materials into a talk outline and slide-by-slide plan."

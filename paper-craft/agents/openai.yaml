@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Craft"
+  short_description: "Write and polish reproducible papers"
+  default_prompt: "Use -craft to turn these results into a structured paper draft with evidence-linked claims."
