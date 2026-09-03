@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test-Driven Development"
+  short_description: "Drive behavior through risk-based red-green loops"
+  default_prompt: "Use $tdd to implement this behavior through a focused red-green-refactor loop at the correct seam."

@@ -31,7 +31,7 @@ for its tests, review, and future changes.
 | Git mechanics | `git-workflow-and-versioning`, `using-git-worktrees`, `commit-generate` |
 | Review and integration | `open-code-review`, `finishing-a-development-branch` |
 | Planning and closure | `create-plan`, `plane-workflow` |
-| Engineering quality | `rust-testing` |
+| Engineering quality | `codebase-design`, `tdd`, `diagnosing-bugs`, `rust-testing` |
 | Local diagnostics | `codex-session-writer-recovery`, `witr-diagnose` |
 
 ## Research and Communication
@@ -54,6 +54,9 @@ long-horizon
   -> plane-workflow when Plane is the authority
   -> dev-loop + lean-delivery
   -> repo-evidence when scope or relationships are uncertain
+  -> codebase-design when interfaces or seams are uncertain
+  -> diagnosing-bugs before fixing hard failures
+  -> tdd for observable behavior at a stable seam
   -> commit-generate
   -> open-code-review
   -> finishing-a-development-branch

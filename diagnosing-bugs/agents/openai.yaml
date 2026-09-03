@@ -1,0 +1,4 @@
+interface:
+  display_name: "Diagnosing Bugs"
+  short_description: "Prove root causes for hard or recurring failures"
+  default_prompt: "Use $diagnosing-bugs to build a tight reproduction, test falsifiable hypotheses, and prove the root cause."

@@ -10,6 +10,8 @@
 明确要求压力测试   grill-me（仅显式调用）
 需要交付设计简报   create-plan
 模块接口或 seam    codebase-design
+复杂或根因不明故障 diagnosing-bugs
+需要 red-green     tdd
 实现或修改         dev-loop + lean-delivery
 陌生仓库           guide + existing-project
 范围或调用链不清楚 repo-evidence
@@ -30,6 +32,8 @@ Push/MR/合并       finishing-a-development-branch
 | 显式要求挑战重大决策 | `grill-me` |
 | 生成有证据的交付设计简报 | `create-plan` |
 | 设计模块接口、所有权和测试 seam | `codebase-design` |
+| 证明复杂、间歇或反复故障的根因 | `diagnosing-bugs` |
+| 在稳定 seam 上以 red-green 实现行为 | `tdd` |
 | 新建项目或子系统 | `new-project` |
 | 恢复陌生仓库地图 | `existing-project` |
 | 查代码、调用者、依赖和影响面 | `repo-evidence` |

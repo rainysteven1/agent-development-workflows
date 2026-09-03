@@ -11,6 +11,8 @@ Need Plane state?    plane-workflow
 Need design pressure? grill-me (explicit only)
 Need a delivery brief? create-plan
 Need a module seam?  codebase-design
+Hard/uncertain bug?  diagnosing-bugs
+Need red-green?      tdd
 Implement/change?    dev-loop + lean-delivery
 Unknown repository?  guide + existing-project
 Unknown scope/flow?  repo-evidence
@@ -32,6 +34,8 @@ Push/MR/merge?       finishing-a-development-branch
 | Stress-test consequential decisions on explicit request | `grill-me` |
 | Create an evidence-backed delivery brief | `create-plan` |
 | Design module interfaces, ownership, and testing seams | `codebase-design` |
+| Prove the cause of a hard, intermittent, or recurring failure | `diagnosing-bugs` |
+| Implement observable behavior through a red-green loop | `tdd` |
 | Start a greenfield repository or subsystem | `new-project` |
 | Recover an unfamiliar repository map | `existing-project` |
 | Find code, callers, dependencies, or impact | `repo-evidence` |

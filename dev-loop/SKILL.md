@@ -22,6 +22,14 @@ their specialized mechanics.
 - `$repo-evidence`: route exact, semantic, and structural repository discovery
   and return revision/freshness-bound evidence. It does not choose implementation
   scope by itself.
+- `$codebase-design`: decide module responsibility, interface placement, and a
+  stable testing seam when those are part of the problem.
+- `$diagnosing-bugs`: prove the root cause of a hard or uncertain failure before
+  any corrective implementation. A diagnosis-only request stops before edits.
+- `$tdd`: own a risk-driven red-green-refactor loop for observable behavior at
+  an established seam; it does not control the broader delivery sequence.
+- `$lean-delivery`: select the smallest acceptance-complete implementation after
+  the required evidence, design, and feedback loop are established.
 - `$existing-project`: perform first-repository bootstrap or reuse a verified
   project map in resume/delta mode. A new worktree does not trigger full
   repository recovery.
@@ -47,6 +55,11 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   target.
 - Record material constraints, explicit non-goals, and uncertain premises.
   Test the cheapest premise most likely to invalidate the direction.
+- Classify the change before selecting optional workflows. A small reversible
+  change may proceed from a fixed contract; a material unsettled design uses
+  `$create-plan`; a Plane-managed design follows the verified Plane authority;
+  and a high-risk change explicitly freezes trust boundaries, recovery, and
+  rollback evidence.
 
 ### 2. Preserve the baseline and isolate the task
 
@@ -93,6 +106,9 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   evidence by itself.
 - Give every increment one independently reviewable reason to change and its
   own acceptance check.
+- Preserve stable `AC-*` identifiers from an approved delivery brief or Plane
+  plan and map each required criterion to its planned test or real-usage
+  mechanism. Do not let a green suite substitute for an unmapped requirement.
 - Before the first review, freeze the feature's acceptance checks, direct
   consumers, trust boundaries, and autonomous remediation budget. Unless the
   repository or user sets a smaller limit, allow at most two remediation
@@ -107,6 +123,14 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
 ### 4. Complete and review one increment at a time
 
 For each increment, finish this loop before starting the next:
+
+Choose the specialized path before editing. For an uncertain, intermittent,
+cross-layer, performance, or repeatedly failing bug, invoke `$diagnosing-bugs`
+and do not implement until its root cause is proven and a fix is authorized.
+When module ownership, interface placement, or the testing seam is unclear,
+invoke `$codebase-design`. When `$tdd` applies, establish and observe the red
+test at that seam before production changes. These Skills feed this loop; none
+replaces its Git, review, or completion gates.
 
 1. Implement the smallest acceptance-complete slice using existing repository
    patterns where possible.
@@ -185,6 +209,11 @@ the demonstrated cause or labeled hypothesis, cleanup result, and next changed
 diagnostic variable. Do not rerun an unchanged failing chain. Continue the
 changed diagnostic and corrective work in the same turn; only dependent planned
 increments remain blocked.
+
+Count distinct evidence-backed correction attempts for the same failure. After
+three unsuccessful fixes, do not attempt a fourth: revalidate the reproduction,
+return to `$diagnosing-bugs`, inspect architecture through `$codebase-design`,
+and obtain user direction for any consequential boundary change.
 
 If the formal OCR verdict is incomplete or failed, stop at the review checkpoint,
 preserve its native receipt/log, and report `not complete`; do not silently wait,

@@ -8,6 +8,7 @@
     {"name": "commit-generate", "category": "git"},
     {"name": "create-plan", "category": "planning"},
     {"name": "dev-loop", "category": "delivery"},
+    {"name": "diagnosing-bugs", "category": "diagnostics"},
     {"name": "existing-project", "category": "direction"},
     {"name": "experiment-lab", "category": "research"},
     {"name": "finishing-a-development-branch", "category": "git"},
@@ -30,6 +31,7 @@
     {"name": "rust-testing", "category": "testing"},
     {"name": "slidecraft", "category": "research"},
     {"name": "talk-architect", "category": "research"},
+    {"name": "tdd", "category": "testing"},
     {"name": "using-git-worktrees", "category": "git"},
     {"name": "weekly-report", "category": "reporting"},
     {"name": "witr-diagnose", "category": "diagnostics"}
