@@ -58,6 +58,12 @@ covers, and ensure every required identifier belongs to at least one Phase.
 Plane becomes the execution authority only after the Page and hierarchy are
 read back and verified.
 
+An approved design from another source may enter the same route. Normalize it
+read-only into the required delivery-brief fields and stable `AC-*` identifiers
+without reopening settled decisions. If a missing field would require a new
+product, architecture, security, or acceptance decision, stop before mutation
+and surface only that blocking decision; do not silently invent it.
+
 If implementation later changes approved scope, public interfaces, data
 ownership, trust boundaries, recovery behavior, or an `AC-*` criterion, stop
 the dependent Phase and reconcile the Page plus affected hierarchy before
