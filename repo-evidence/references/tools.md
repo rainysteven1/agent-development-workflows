@@ -81,6 +81,11 @@ python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py converge \
   --repo /absolute/canonical/worktree --apply
 ```
 
+Use `configure --external-hooks` when the repository already owns Git hooks
+through Lefthook or an equivalent manager. This mode never replaces those hook
+files and automatically adds a marker-fenced block to the common
+`info/exclude` for `graft/`, `.graft/`, and `.zvec-grep/`.
+
 `prepare-worktree` verifies the common Git directory, clean/revision-matched
 canonical state, configured Graft version, absent task Zvec-Grep directory, and
 then uses non-deleting `rsync -a --safe-links`. It follows the copy with

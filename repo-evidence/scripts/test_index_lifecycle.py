@@ -162,7 +162,7 @@ esac
             if not common_value.is_absolute()
             else common_value.resolve()
         )
-        for event in ("post-checkout", "post-merge", "post-rewrite"):
+        for event in ("post-checkout", "post-commit", "post-merge", "post-rewrite"):
             hook = common_dir / "hooks" / event
             self.assertTrue(hook.is_file())
             self.assertIn("repo-evidence:index-lifecycle:v1", hook.read_text(encoding="utf-8"))
@@ -199,6 +199,18 @@ esac
         (task / "source.txt").write_text("task change\n", encoding="utf-8")
         self._git(task, "add", "source.txt")
         self._git(task, "commit", "-m", "feat: change task source")
+        post_commit_state = json.loads(state_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            self._git(task, "rev-parse", "HEAD"),
+            post_commit_state["tasks"][str(task)]["revision"],
+            json.dumps(
+                {
+                    "state": post_commit_state["tasks"][str(task)],
+                    "commands": self.log.read_text(encoding="utf-8"),
+                },
+                indent=2,
+            ),
+        )
         task_result = self._lifecycle(task, "prepare-worktree", "--apply")
         self.assertEqual("ready", task_result["status"])
         self.assertFalse(task_result["snapshotCopied"])
@@ -357,6 +369,66 @@ esac
         self.assertEqual("failed", result["status"])
         self.assertIn("refusing to overwrite", result["error"])
         self.assertEqual("#!/bin/sh\necho existing\n", hook.read_text(encoding="utf-8"))
+
+    def test_external_hook_mode_preserves_existing_hooks(self) -> None:
+        canonical = self._create_repository()
+        hook = canonical / ".git/hooks/post-merge"
+        hook.write_text("#!/bin/sh\necho lefthook\n", encoding="utf-8")
+        exclude = canonical / ".git/info/exclude"
+        exclude.chmod(0o640)
+        result = self._lifecycle(
+            canonical,
+            "configure",
+            "--target-branch",
+            "main",
+            "--bootstrap-indexes",
+            "--external-hooks",
+            "--apply",
+        )
+        self.assertTrue(result["verified"])
+        self.assertEqual("external", result["hooksMode"])
+        self.assertEqual([], result["hooks"])
+        self.assertEqual("#!/bin/sh\necho lefthook\n", hook.read_text(encoding="utf-8"))
+        self.assertIn("repo-evidence:index-lifecycle:v1", exclude.read_text(encoding="utf-8"))
+        self.assertEqual(0o640, exclude.stat().st_mode & 0o777)
+
+    def test_legacy_owned_configuration_adds_excludes_in_place(self) -> None:
+        canonical = self._create_repository()
+        configured = self._lifecycle(
+            canonical,
+            "configure",
+            "--target-branch",
+            "main",
+            "--bootstrap-indexes",
+            "--apply",
+        )
+        self.assertTrue(configured["verified"])
+        config_path = canonical / ".git/repo-evidence/index-lifecycle.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        self.assertNotIn("hooksMode", config)
+
+        exclude = canonical / ".git/info/exclude"
+        exclude.write_text("# local excludes\n", encoding="utf-8")
+        preview = self._lifecycle(
+            canonical,
+            "configure",
+            "--target-branch",
+            "main",
+            "--bootstrap-indexes",
+        )
+        self.assertFalse(preview["verified"])
+        self.assertEqual("write", preview["excludeAction"])
+        upgraded = self._lifecycle(
+            canonical,
+            "configure",
+            "--target-branch",
+            "main",
+            "--bootstrap-indexes",
+            "--apply",
+        )
+        self.assertTrue(upgraded["verified"])
+        self.assertEqual("write", upgraded["excludeAction"])
+        self.assertIn("repo-evidence:index-lifecycle:v1", exclude.read_text(encoding="utf-8"))
 
     def test_configuration_refuses_symlinked_hook(self) -> None:
         canonical = self._create_repository()

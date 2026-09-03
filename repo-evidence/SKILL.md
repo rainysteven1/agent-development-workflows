@@ -113,7 +113,7 @@ python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py status --repo "$
 ```
 
 Configuration is per Git common directory. It installs owned `post-checkout`,
-`post-merge`, and `post-rewrite` hooks only when those paths are absent or
+`post-commit`, `post-merge`, and `post-rewrite` hooks only when those paths are absent or
 already owned by this lifecycle; it refuses to replace another hook. A new
 linked worktree's post-checkout copies the canonical Graft snapshot with rsync,
 then runs blocking task-local build/check. Canonical merge/rewrite events run
@@ -125,6 +125,12 @@ This snapshot reuse is validated for the configured Graft version and is not an
 upstream worktree guarantee. The manager records and enforces tool versions;
 after a version change it refuses snapshot reuse until compatibility is
 explicitly revalidated. Never share one writable cache between worktrees.
+
+When Lefthook or another repository hook manager already owns the Git hooks,
+configure with `--external-hooks`. The lifecycle then maintains common local
+cache excludes and index state without writing hook files; the repository's
+maintained hook configuration must call `index_lifecycle.py hook --repo "$PWD"
+--event <event>` for post-checkout, post-commit, post-merge, and post-rewrite.
 
 Zvec-Grep stores root-bound workspace metadata and absolute source paths. Do not
 copy `.zvec-grep` between worktrees. Query the canonical index for stable

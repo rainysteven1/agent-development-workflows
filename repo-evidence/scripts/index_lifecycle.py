@@ -27,7 +27,10 @@ STATE_NAME = "index-state.json"
 LOCK_NAME = "index-lifecycle.lock"
 OWNERSHIP_NAME = ".repo-evidence-managed.json"
 HOOK_MARKER = "# repo-evidence:index-lifecycle:v1"
-HOOK_EVENTS = ("post-checkout", "post-merge", "post-rewrite")
+HOOK_EVENTS = ("post-checkout", "post-commit", "post-merge", "post-rewrite")
+EXCLUDE_BEGIN = "# repo-evidence:index-lifecycle:v1 begin"
+EXCLUDE_END = "# repo-evidence:index-lifecycle:v1 end"
+EXCLUDE_PATTERNS = ("/graft/", "/.graft/", "/.zvec-grep/")
 DEFAULT_EMBEDDING = "local/potion-code-16m-v2"
 COMMAND_TIMEOUT_SECONDS = 600
 LOCK_TIMEOUT_SECONDS = 30
@@ -42,12 +45,17 @@ def emit(value: Any) -> None:
 
 
 def run(
-    command: list[str], cwd: Path, *, timeout: int = COMMAND_TIMEOUT_SECONDS
+    command: list[str],
+    cwd: Path,
+    *,
+    timeout: int = COMMAND_TIMEOUT_SECONDS,
+    environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(
             command,
             cwd=cwd,
+            env=environment,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -86,7 +94,7 @@ def graft_check_ready(result: subprocess.CompletedProcess[str]) -> bool:
 
 
 def checked_action(command: list[str], cwd: Path) -> dict[str, Any]:
-    result = run(command, cwd)
+    result = run(command, cwd, environment=git_environment(cwd))
     if result.returncode != 0:
         raise LifecycleError(
             f"command failed ({result.returncode}): {shlex.join(command)}; "
@@ -98,7 +106,12 @@ def checked_action(command: list[str], cwd: Path) -> dict[str, Any]:
 
 
 def git(repo: Path, *arguments: str) -> str:
-    result = run(["git", "-C", str(repo), *arguments], repo, timeout=60)
+    result = run(
+        ["git", "-C", str(repo), *arguments],
+        repo,
+        timeout=60,
+        environment=git_environment(repo),
+    )
     if result.returncode != 0:
         raise LifecycleError(
             f"Git command failed for {repo}: git {' '.join(arguments)}"
@@ -107,7 +120,12 @@ def git(repo: Path, *arguments: str) -> str:
 
 
 def git_optional(repo: Path, *arguments: str) -> str | None:
-    result = run(["git", "-C", str(repo), *arguments], repo, timeout=60)
+    result = run(
+        ["git", "-C", str(repo), *arguments],
+        repo,
+        timeout=60,
+        environment=git_environment(repo),
+    )
     if result.returncode == 1:
         return None
     if result.returncode != 0:
@@ -122,10 +140,28 @@ def git_is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
         ["git", "-C", str(repo), "merge-base", "--is-ancestor", ancestor, descendant],
         repo,
         timeout=60,
+        environment=git_environment(repo),
     )
     if result.returncode not in {0, 1}:
         raise LifecycleError("cannot verify task ancestry against the canonical baseline")
     return result.returncode == 0
+
+
+def git_environment(cwd: Path) -> dict[str, str]:
+    environment = os.environ.copy()
+    result = subprocess.run(
+        ["git", "rev-parse", "--local-env-vars"],
+        cwd=cwd,
+        env=environment,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if result.returncode == 0:
+        for variable in result.stdout.splitlines():
+            environment.pop(variable, None)
+    return environment
 
 
 def repository_context(path: Path) -> dict[str, Any]:
@@ -155,6 +191,7 @@ def metadata_paths(common_dir: Path) -> dict[str, Path]:
         "config": state_dir / CONFIG_NAME,
         "state": state_dir / STATE_NAME,
         "lock": state_dir / LOCK_NAME,
+        "exclude": common_dir / "info" / "exclude",
     }
 
 
@@ -200,6 +237,47 @@ def atomic_write_json(path: Path, value: dict[str, Any]) -> None:
     finally:
         if os.path.exists(temporary_name):
             os.unlink(temporary_name)
+
+
+def exclude_block() -> str:
+    return "\n".join((EXCLUDE_BEGIN, *EXCLUDE_PATTERNS, EXCLUDE_END))
+
+
+def local_excludes_ready(common_dir: Path) -> bool:
+    path = metadata_paths(common_dir)["exclude"]
+    return path.is_file() and exclude_block() in path.read_text(encoding="utf-8")
+
+
+def install_local_excludes(common_dir: Path) -> bool:
+    path = metadata_paths(common_dir)["exclude"]
+    path_exists = path.is_file()
+    current = path.read_text(encoding="utf-8") if path_exists else ""
+    current_mode = stat.S_IMODE(path.stat().st_mode) if path_exists else 0o600
+    begin_present = EXCLUDE_BEGIN in current
+    end_present = EXCLUDE_END in current
+    if begin_present != end_present:
+        raise LifecycleError(f"managed cache exclude block is incomplete: {path}")
+    if begin_present:
+        if exclude_block() not in current:
+            raise LifecycleError(f"managed cache exclude block was modified: {path}")
+        return False
+    path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+    separator = "" if not current or current.endswith("\n") else "\n"
+    payload = current + separator + exclude_block() + "\n"
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent, prefix=f".{path.name}.", text=True
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_name, current_mode)
+        os.replace(temporary_name, path)
+    finally:
+        if os.path.exists(temporary_name):
+            os.unlink(temporary_name)
+    return True
 
 
 def ownership_payload(task: Path, common_dir: Path) -> dict[str, Any]:
@@ -252,10 +330,16 @@ def validate_config(config: dict[str, Any], context: dict[str, Any]) -> dict[str
         raise LifecycleError("Graft version changed; revalidate snapshot compatibility explicitly")
     if config.get("zgVersion") != tool_version("zg", canonical):
         raise LifecycleError("Zvec-Grep version changed; reconfigure the managed baseline explicitly")
-    if config.get("hooksPath") != str(
+    # Configurations created before external-hook support implicitly owned hooks.
+    hooks_mode = config.get("hooksMode", "owned")
+    if hooks_mode not in {"owned", "external"}:
+        raise LifecycleError("managed index configuration has an invalid hooksMode")
+    if hooks_mode == "owned" and config.get("hooksPath") != str(
         resolve_hooks_dir(canonical, canonical_context["commonDir"])
     ):
         raise LifecycleError("active Git hooks path changed; reconfigure lifecycle hooks explicitly")
+    if not local_excludes_ready(canonical_context["commonDir"]):
+        raise LifecycleError("managed cache excludes are missing or modified")
     return {**config, "canonicalWorktree": str(canonical)}
 
 
@@ -352,9 +436,9 @@ def install_hooks(
 
 
 def desired_config(
-    context: dict[str, Any], branch: str, bootstrap_indexes: bool
+    context: dict[str, Any], branch: str, bootstrap_indexes: bool, hooks_mode: str
 ) -> dict[str, Any]:
-    return {
+    config = {
         "schemaVersion": SCHEMA_VERSION,
         "canonicalWorktree": str(context["root"]),
         "targetBranch": branch,
@@ -363,8 +447,14 @@ def desired_config(
         "zgVersion": tool_version("zg", context["root"]),
         "zgEmbedding": DEFAULT_EMBEDDING,
         "zgDevice": "cpu",
-        "hooksPath": str(resolve_hooks_dir(context["root"], context["commonDir"])),
     }
+    if hooks_mode == "owned":
+        config["hooksPath"] = str(
+            resolve_hooks_dir(context["root"], context["commonDir"])
+        )
+    else:
+        config["hooksMode"] = hooks_mode
+    return config
 
 
 def configure(
@@ -372,6 +462,7 @@ def configure(
     *,
     target_branch: str | None,
     bootstrap_indexes: bool,
+    external_hooks: bool,
     apply: bool,
 ) -> dict[str, Any]:
     context = repository_context(repo)
@@ -379,15 +470,16 @@ def configure(
     branch = target_branch or context["branch"]
     if not branch:
         raise LifecycleError("canonical worktree must be on a named target branch")
-    config = desired_config(context, branch, bootstrap_indexes)
+    hooks_mode = "external" if external_hooks else "owned"
+    config = desired_config(context, branch, bootstrap_indexes, hooks_mode)
     paths = metadata_paths(context["commonDir"])
     current = load_json(paths["config"], required=False)
     if current and current != config:
         raise LifecycleError(
             "managed index configuration already exists with different values"
         )
-    hooks_dir = Path(config["hooksPath"])
-    hooks = hook_actions(hooks_dir)
+    hooks_dir = Path(config["hooksPath"]) if hooks_mode == "owned" else None
+    hooks = hook_actions(hooks_dir) if hooks_dir is not None else []
     convergence_actions(context["root"], config)
     result = {
         "action": None if current == config and not hooks else "configure",
@@ -396,6 +488,8 @@ def configure(
         "commonDir": str(context["commonDir"]),
         "targetBranch": branch,
         "bootstrapAuthorized": bootstrap_indexes,
+        "hooksMode": hooks_mode,
+        "excludeAction": "none" if local_excludes_ready(context["commonDir"]) else "write",
         "hooks": hooks,
     }
     if apply:
@@ -405,15 +499,18 @@ def configure(
             branch = target_branch or context["branch"]
             if not branch:
                 raise LifecycleError("canonical worktree must be on a named target branch")
-            config = desired_config(context, branch, bootstrap_indexes)
-            hooks_dir = Path(config["hooksPath"])
+            config = desired_config(context, branch, bootstrap_indexes, hooks_mode)
+            hooks_dir = Path(config["hooksPath"]) if hooks_mode == "owned" else None
             current = load_json(paths["config"], required=False)
             if current and current != config:
                 raise LifecycleError("managed index configuration changed before apply")
-            hooks = hook_actions(hooks_dir)
+            hooks = hook_actions(hooks_dir) if hooks_dir is not None else []
             convergence_actions(context["root"], config)
-            installed_hooks = install_hooks(
-                hooks_dir, context["root"], context["commonDir"]
+            excludes_changed = install_local_excludes(context["commonDir"])
+            installed_hooks = (
+                install_hooks(hooks_dir, context["root"], context["commonDir"])
+                if hooks_dir is not None
+                else []
             )
             atomic_write_json(paths["config"], config)
             result.update(
@@ -422,13 +519,18 @@ def configure(
                     "canonicalWorktree": str(context["root"]),
                     "commonDir": str(context["commonDir"]),
                     "targetBranch": branch,
+                    "excludeAction": "write" if excludes_changed else "none",
                     "hooks": installed_hooks,
                 }
             )
         result["convergence"] = converge(context["root"], apply=True)
         result["verified"] = result["convergence"]["status"] in {"ready", "already-ready"}
     else:
-        result["verified"] = current == config and not hooks
+        result["verified"] = (
+            current == config
+            and not hooks
+            and local_excludes_ready(context["commonDir"])
+        )
     return result
 
 
@@ -492,7 +594,7 @@ def verify_ready(canonical: Path) -> list[dict[str, Any]] | None:
     ]
     evidence = []
     for command in commands:
-        result = run(command, canonical)
+        result = run(command, canonical, environment=git_environment(canonical))
         evidence.append({"command": command, **command_summary(result)})
         if command[:2] == ["graft", "check"]:
             if not graft_check_ready(result):
@@ -763,6 +865,7 @@ def build_parser() -> argparse.ArgumentParser:
     configure_parser.add_argument("--repo", type=Path, default=Path.cwd())
     configure_parser.add_argument("--target-branch")
     configure_parser.add_argument("--bootstrap-indexes", action="store_true")
+    configure_parser.add_argument("--external-hooks", action="store_true")
     configure_parser.add_argument("--apply", action="store_true")
     for name in ("converge", "prepare-worktree"):
         command = commands.add_parser(name)
@@ -784,6 +887,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.repo,
                 target_branch=args.target_branch,
                 bootstrap_indexes=args.bootstrap_indexes,
+                external_hooks=args.external_hooks,
                 apply=args.apply,
             )
         elif args.command == "converge":
