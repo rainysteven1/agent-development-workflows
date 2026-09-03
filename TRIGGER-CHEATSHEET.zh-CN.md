@@ -1,237 +1,56 @@
-# Skill 触发词速查表
-
-这是这套 Codex skill 的快速使用说明，重点回答一个问题：什么时候该用哪个 skill。
-
-## 软件开发
-
-### `$guide`
-
-适合什么时候用：
-
-- 刚进入一个不熟的仓库
-- 想先看项目规则、命令、约定再开工
-- 不确定这个 repo 平时怎么协作
-
-常见说法：
-
-- "用 `$guide` 先帮我总结这个仓库怎么工作。"
-- "先看看这个项目的规则和流程。"
-- "开工前先给我一个 briefing。"
-
-### `$dev-loop`
-
-适合什么时候用：
-
-- 正在实现功能、修 bug、改代码
-- 重构后想把验证做扎实
-- 希望最后能明确说清楚改了什么、验了什么、还剩什么风险
-
-常见说法：
-
-- "用 `$dev-loop` 把这个 bug 修掉并验证。"
-- "加这个功能，顺便把关键检查跑掉。"
-- "重构这块代码，并把剩余风险说清楚。"
-
-### `$north-star`
-
-适合什么时候用：
-
-- 项目优先级不清楚
-- 需要先定指标再优化
-- 多种方案都能做，但缺少取舍标准
-
-常见说法：
-
-- "用 `$north-star` 帮我定义这个项目该优化什么。"
-- "这里真正重要的 1 到 3 个指标是什么？"
-- "在继续重构前先把目标定清楚。"
-
-### `$long-horizon`
-
-适合什么时候用：
-
-- 希望 Codex 少打断你
-- 任务会持续很久，中间有很多小决策
-- 想明确什么事情它自己做、什么事情再来问你
-
-常见说法：
-
-- "用 `$long-horizon` 自己推进，只有真决策点再问我。"
-- "少打扰我，问题攒一起再问。"
-- "低层细节你自己定，关键分歧再升级。"
-
-### `$new-project`
-
-适合什么时候用：
-
-- 新项目从零开始
-- 新子系统要起第一版
-- 想先把第一批需求和结构收敛好
-
-常见说法：
-
-- "用 `$new-project` 帮我起这个工具的第一版。"
-- "从零开始搭这个子系统。"
-- "先把首个可交付切片和目录结构定出来。"
-
-### `$existing-project`
-
-适合什么时候用：
-
-- 接手老项目
-- 仓库不熟，改之前先看懂
-- 文档、测试、代码可能互相打架
-
-常见说法：
-
-- "用 `$existing-project` 先帮我摸清这个仓库。"
-- "先看懂这个老服务到底怎么工作的。"
-- "先恢复上下文和主要冲突，再动代码。"
-
-## 学术研究
-
-### `$research-ideation`
-
-适合什么时候用：
-
-- 有研究直觉，但还没变成可验证假设
-- 想判断一个 idea 值不值得继续
-- 正在考虑 pivot
-
-常见说法：
-
-- "用 `$research-ideation` 把这个想法变成可测试假设。"
-- "帮我 refine 一下这个研究方向。"
-- "这个 idea 怎么才算可证伪？"
-
-### `$experiment-lab`
-
-适合什么时候用：
-
-- 设计实验、跑实验、管实验
-- 要整理 baseline、ablation、结果对比
-- 希望实验记录之后还能追溯
-
-常见说法：
-
-- "用 `$experiment-lab` 设计这个 ablation。"
-- "把这些实验 run 组织起来并做比较。"
-- "帮我把实验计划和结果记录结构化。"
-
-### `$paper-craft`
-
-适合什么时候用：
-
-- 在写论文、润论文、改论文
-- 想检查 claim 和 evidence 是否一致
-- 在做 rebuttal、revision、camera-ready
-
-常见说法：
-
-- "用 `$paper-craft` 把这些结果写成论文段落。"
-- "润一下这版 paper draft，并检查论据链。"
-- "帮我把 rebuttal 改动整理干净。"
-
-### `$research-comm`
-
-适合什么时候用：
-
-- 准备跟导师汇报
-- 准备和合作者讨论
-- 想从一堆实验记录里抽出最值得讲的 3 到 5 点
-
-常见说法：
-
-- "用 `$research-comm` 帮我准备明天组会。"
-- "这次最值得讨论的点有哪些？"
-- "把这些日志压成一个聚焦的研究更新。"
-
-### `$talk-architect`
-
-适合什么时候用：
-
-- 想把论文或笔记变成报告提纲
-- 报告故事线、听众定位、时间分配还没稳定
-- 需要先做逐页规划，再去做 slides
-
-常见说法：
-
-- "用 `$talk-architect` 把这篇论文变成 seminar 提纲。"
-- "规划一个 20 分钟 conference talk。"
-- "帮我把这项工作压成一个清楚的报告故事。"
-
-### `$slidecraft`
-
-适合什么时候用：
-
-- 在做学术汇报 slides
-- 想修布局、密度、逐步展示、视觉系统
-- talk 结构已经有了，现在开始落 deck
-
-常见说法：
-
-- "用 `$slidecraft` 帮我做这套学术 slides。"
-- "修一下这套 deck 的排版和密度问题。"
-- "把这份 slide plan 落成完整 deck。"
-
-### `$plotting`
-
-适合什么时候用：
-
-- 画论文图、实验图、附录图
-- 不确定该选什么 chart 来支撑结论
-- 想提升图的可读性、标注、误差展示
-
-常见说法：
-
-- "用 `$plotting` 帮我设计这张实验结果图。"
-- "这个对比最适合什么图来画？"
-- "把这张论文图整理到可投稿水平。"
-
-### `$pptx`
-
-适合什么时候用：
-
-- 真正的源文件就是 `.pptx`
-- 想直接读、拆、合、改 PowerPoint 成品
-- 需要对现成 PPT 做 artifact 级 QA
-
-常见说法：
-
-- "用 `$pptx` 检查并清理这份 PPT。"
-- "把这个 PowerPoint 的文字抽出来总结。"
-- "把这几个 PPT 合起来并做最终检查。"
-
-## 报告总结
-
-### `$weekly-report`
-
-适合什么时候用：
-
-- 要写周报
-- 想从 commit 历史自动归纳本周工作
-- 想把零碎 commit 合并成可汇报的结果项
-
-常见说法：
-
-- "用 `$weekly-report` 总结一下这周做了什么。"
-- "根据最近提交生成一份周报。"
-- "把过去 7 天的 git 历史整理成简明更新。"
-
-## 最短路由口诀
-
-- 先看项目怎么做：`$guide`
-- 开始写代码和验证：`$dev-loop`
-- 先定目标和指标：`$north-star`
-- 少打扰、自己推进：`$long-horizon`
-- 新项目起步：`$new-project`
-- 老项目接手：`$existing-project`
-- 想法变假设：`$research-ideation`
-- 假设进实验：`$experiment-lab`
-- 结果写论文：`$paper-craft`
-- 准备汇报讨论：`$research-comm`
-- 先规划报告故事：`$talk-architect`
-- 再落地做 slides：`$slidecraft`
-- 画论文图：`$plotting`
-- 直接处理 PPT 成品：`$pptx`
-- 自动写周报：`$weekly-report`
+# Agent Skill 路由速查
+
+这是自研开发管理 Skill 套件的短路由图。每次只加载当前任务真正需要的 Skill。
+
+## 日常开发默认路线
+
+```text
+需要自主推进       long-horizon
+需要 Plane 状态    plane-workflow
+实现或修改         dev-loop + lean-delivery
+陌生仓库           guide + existing-project
+范围或调用链不清楚 repo-evidence
+生成原子提交信息   commit-generate
+提交后正式审查     open-code-review
+Push/MR/合并       finishing-a-development-branch
+```
+
+`dev-loop` 控制完整实施流程；`git-workflow-and-versioning` 负责 Git 边界，
+`using-git-worktrees` 负责隔离工作区。
+
+## 按问题选择
+
+| 需求 | Skill |
+| --- | --- |
+| 读取仓库规则和维护入口 | `guide` |
+| 固定目标、指标和取舍 | `north-star` |
+| 新建项目或子系统 | `new-project` |
+| 恢复陌生仓库地图 | `existing-project` |
+| 查代码、调用者、依赖和影响面 | `repo-evidence` |
+| 管理跨会话或团队 Memory | `memory-governance` |
+| 实现、修复、重构和交付 | `dev-loop` |
+| 少打断、按边界自主推进 | `long-horizon` |
+| 控制范围、避免过度设计 | `lean-delivery` |
+| 管理目标分支、提交和版本 | `git-workflow-and-versioning` |
+| 创建或复用隔离 worktree | `using-git-worktrees` |
+| 生成一个原子提交的信息 | `commit-generate` |
+| 对不可变 commit 做 OCR 审查 | `open-code-review` |
+| Push、MR、合并和清理 | `finishing-a-development-branch` |
+| 管理 Plane WP/Phase 和证据 | `plane-workflow` |
+| 设计风险驱动的 Rust 测试 | `rust-testing` |
+| 恢复 Codex active-writer 会话 | `codex-session-writer-recovery` |
+| 诊断端口和进程启动链 | `witr-diagnose` |
+
+## 研究路线
+
+```text
+想法 -> research-ideation -> experiment-lab -> plotting/paper-craft
+     -> research-comm -> talk-architect -> slidecraft/pptx
+```
+
+基于提交生成周报时使用 `weekly-report`。
+
+## 边界
+
+AnySearch、Workbuddy、Paseo、Lark、视觉包以及其他 marketplace Skill 属于外部安装工具，
+不由这个仓库维护，也不复制进来。

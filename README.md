@@ -1,62 +1,78 @@
-# Codex Skills Selected
+# Agent Development Workflows
 
-This directory contains Codex-adapted skills migrated from the `skills-main` Claude skill pack.
+This repository is the source of truth for Rainy's self-maintained agent
+Skills. It covers the complete development-management loop: orientation,
+repository evidence, implementation, Git isolation, review, Plane evidence,
+integration, testing, diagnostics, and research delivery.
 
-## Included Skills
+The repository is client-neutral. Codex, Claude-compatible clients, CC Switch,
+and other agent hosts are deployment targets; their installed Skill directories
+are not sources of truth.
 
-### Software Development
+## Ownership Boundary
 
-| Skill | Purpose |
-|---|---|
-| `guide` | Brief the repo's workflow, conventions, and likely next skill before work starts |
-| `dev-loop` | Drive implementation, verification, and completion reporting |
-| `repo-evidence` | Route exact, semantic, structural, and revision-bound repository evidence |
-| `git-workflow-and-versioning` | Maintain isolated, atomic, reviewable Git history |
-| `finishing-a-development-branch` | Verify and perform an authorized branch integration handoff |
-| `open-code-review` | Run immutable per-commit OCR review and preserve receipts |
-| `plane-workflow` | Plan and execute Plane work packages with review evidence |
-| `north-star` | Define measurable project objectives and tradeoff rules |
-| `long-horizon` | Run with higher autonomy and controlled escalation |
-| `new-project` | Scope and scaffold a greenfield project or subsystem |
-| `existing-project` | Recover intent and working context from an unfamiliar codebase |
+Every Skill committed here is maintained as part of this workflow suite. Do not
+vendor provider or marketplace Skills merely because they are installed on one
+machine. AnySearch, Workbuddy, Paseo, Lark, visual-design packs, and Android
+testing packs remain external dependencies and keep their own update channels.
 
-### Research
+An externally inspired Skill belongs here only after its maintained behavior
+has been rewritten for this suite and this repository accepts responsibility
+for its tests, review, and future changes.
 
-| Skill | Purpose |
-|---|---|
-| `research-ideation` | Turn research hunches into testable hypotheses |
-| `experiment-lab` | Plan, track, compare, and interpret experiments |
-| `paper-craft` | Draft and polish papers with claim-evidence consistency |
-| `research-comm` | Prepare advisor, coauthor, or meeting updates |
-| `talk-architect` | Plan an academic talk before building slides |
-| `slidecraft` | Build and diagnose academic decks and slide structure |
-| `plotting` | Create publication-quality figures |
-| `pptx` | Handle native `.pptx` editing, extraction, and QA |
+## Development Management
 
-### Reporting
+| Stage | Skills |
+| --- | --- |
+| Direction | `guide`, `north-star`, `new-project`, `existing-project` |
+| Evidence | `repo-evidence`, `memory-governance` |
+| Delivery control | `dev-loop`, `long-horizon`, `lean-delivery` |
+| Git mechanics | `git-workflow-and-versioning`, `using-git-worktrees`, `commit-generate` |
+| Review and integration | `open-code-review`, `finishing-a-development-branch` |
+| Planning and closure | `plane-workflow` |
+| Engineering quality | `rust-testing` |
+| Local diagnostics | `codex-session-writer-recovery`, `witr-diagnose` |
 
-| Skill | Purpose |
-|---|---|
-| `weekly-report` | Generate weekly work reports from commit history |
+## Research and Communication
 
-## Structure
+| Area | Skills |
+| --- | --- |
+| Research lifecycle | `research-ideation`, `experiment-lab`, `paper-craft` |
+| Results and figures | `plotting` |
+| Communication | `research-comm`, `talk-architect`, `slidecraft`, `pptx` |
+| Reporting | `weekly-report` |
 
-Each skill folder contains:
+## Default Daily Stack
 
-- `SKILL.md`: the Codex-facing skill instructions
-- `agents/openai.yaml`: UI metadata for Codex skill discovery
+For an autonomous Plane-managed implementation, start with:
 
-Quick reference files in this directory:
+```text
+long-horizon
+  -> plane-workflow
+  -> dev-loop + lean-delivery
+  -> repo-evidence when scope or relationships are uncertain
+  -> commit-generate
+  -> open-code-review
+  -> finishing-a-development-branch
+```
 
-- `TRIGGER-CHEATSHEET.md`: short English routing guide
-- `TRIGGER-CHEATSHEET.zh-CN.md`: Chinese routing guide
+`dev-loop` is the controlling implementation workflow. The other Skills own
+specialized decisions; they do not create parallel delivery loops.
 
-## Source Notes
+## Repository Contract
 
-- These skills were adapted for Codex, not copied verbatim from the Claude plugin.
-- Claude-plugin-specific automation such as auto-harness hooks, notification plumbing, and skill telemetry was intentionally omitted.
-- The training-only skill `areal-rl` was not included in this pack.
+- Edit a Skill here, not in an installed copy.
+- Keep one independently reviewable reason per commit.
+- Validate every changed Skill with the system `skill-creator` validator and
+  execute its changed scripts or tests.
+- Run immutable per-commit review before integration.
+- Synchronize only repository-owned Skills to agent hosts. Never overwrite or
+  delete unrelated third-party Skills in those hosts.
+- Keep credentials, Memory keys, runtime state, review receipts, and generated
+  caches outside Git.
 
-## Validation
+Each Skill directory contains a required `SKILL.md` and only the scripts,
+references, assets, evaluation cases, or UI metadata that its maintained
+workflow needs.
 
-All skill folders in this directory passed `quick_validate.py` from the local `skill-creator` system skill.
+See `TRIGGER-CHEATSHEET.md` or `TRIGGER-CHEATSHEET.zh-CN.md` for concise routing.
