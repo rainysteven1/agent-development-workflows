@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lean Delivery"
+  short_description: "Choose the smallest acceptance-complete solution"
+  default_prompt: "Use $lean-delivery to implement this task without adding speculative complexity."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit Generate"
+  short_description: "Draft conventional commits from diffs"
+  default_prompt: "Use $commit-generate to draft a Conventional Commit message from these changes."

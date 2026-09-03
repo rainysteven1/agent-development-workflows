@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Governance"
+  short_description: "Govern persistent memory trust, promotion, and sharing"
+  default_prompt: "Use $memory-governance to handle this persistent Memory read or write safely."
