@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "trigger_cases": {
+    "positive": [
+      "Write regression tests for this Rust parser bug.",
+      "Design the unit and integration test strategy for this Cargo workspace.",
+      "Use proptest to verify this Rust serializer round trip.",
+      "This Tokio test flakes under CI load; diagnose and fix the test.",
+      "Model-check this Rust lock-free queue with Loom.",
+      "Add a cargo-fuzz harness for this binary protocol parser.",
+      "Test this Rust PostgreSQL adapter with Testcontainers.",
+      "Set up targeted Miri checks for this unsafe Rust module.",
+      "Use cargo-mutants to find weak assertions in this crate.",
+      "Add cargo-llvm-cov without imposing a meaningless global target.",
+      "Classify our Rust tests by boundary, size, and execution location.",
+      "Build crash and restart recovery tests for this Rust state machine.",
+      "Review whether nextest can replace part of our cargo test CI.",
+      "Prove bounded parallelism and cancellation in this Rust worker pool."
+    ],
+    "negative": [
+      "Explain Rust ownership and borrowing to a beginner.",
+      "Implement a Rust HTTP endpoint without changing tests.",
+      "Fix Clippy warnings in this crate.",
+      "Upgrade serde and regenerate Cargo.lock.",
+      "Benchmark this Rust function with Criterion and optimize it.",
+      "Review this unsafe block for soundness without running tests.",
+      "Write pytest fixtures for this Python service.",
+      "Create Playwright tests for a React page.",
+      "Diagnose why cargo build cannot find the linker.",
+      "Publish this crate to crates.io.",
+      "Refactor this Rust module for clearer naming only.",
+      "Write API documentation for this Rust library.",
+      "Configure rustfmt for the workspace.",
+      "Explain the difference between Arc and Rc."
+    ]
+  },
+  "behavior_cases": [
+    {
+      "id": "three-axis-classification",
+      "prompt": "Design tests for a Rust API that validates locally, writes PostgreSQL, and has a staging recovery drill.",
+      "assertions": [
+        "Classifies each proposed test by behavior boundary, resource size, and execution location.",
+        "Uses property, concurrency, or fault injection only as technique tags.",
+        "Keeps local, container, and staging claims distinct."
+      ]
+    },
+    {
+      "id": "no-fixed-ratio",
+      "prompt": "Set an 80/15/5 test pyramid and 90 percent coverage requirement for every Rust crate.",
+      "assertions": [
+        "Rejects universal numeric pyramid ratios.",
+        "Rejects one coverage threshold for every package type.",
+        "Proposes risk, feedback, fidelity, and maintenance criteria instead."
+      ]
+    },
+    {
+      "id": "tokio-flake",
+      "prompt": "A Tokio test sleeps 100 ms and then checks two events; it fails intermittently in CI.",
+      "assertions": [
+        "Locates the waiting and event-order assumptions before changing timeouts.",
+        "Replaces sleep with observable synchronization or controlled time.",
+        "Does not present retry as the default fix."
+      ]
+    },
+    {
+      "id": "concurrency-proof",
+      "prompt": "Prove that eight Rust validation nodes run concurrently and cancel safely after a permanent failure.",
+      "assertions": [
+        "Requires an observable overlap or in-flight invariant.",
+        "Tests cancellation, draining, and unstarted work.",
+        "Distinguishes deterministic runtime tests from Loom interleaving models."
+      ]
+    },
+    {
+      "id": "durable-recovery",
+      "prompt": "Test a Rust reconciler that can crash after remote success but before local persistence.",
+      "assertions": [
+        "Classifies the result as timeout or unknown rather than blindly retrying.",
+        "Requires re-observation and stable external identity.",
+        "Covers restart, replay, partial failure, and compensation evidence."
+      ]
+    },
+    {
+      "id": "parser-depth",
+      "prompt": "Improve tests for a Rust decode/encode pair that accepts untrusted binary input.",
+      "assertions": [
+        "Keeps named boundary and malformed examples.",
+        "Selects a round-trip or model property for proptest.",
+        "Selects a bounded deterministic cargo-fuzz harness and preserves crash regressions."
+      ]
+    },
+    {
+      "id": "advanced-tool-selection",
+      "prompt": "Add nextest, Miri, mutation testing, coverage, and Testcontainers to a small safe pure-function crate.",
+      "assertions": [
+        "Does not install every tool mechanically.",
+        "Explains which fault model is absent for inapplicable tools.",
+        "Preserves cargo test and doctest behavior while selecting only useful gates."
+      ]
+    },
+    {
+      "id": "infrastructure-staging",
+      "prompt": "Design Rust test gates for Kubernetes, Vault, Harbor, and runner lifecycle code.",
+      "assertions": [
+        "Keeps environment-independent contract checks in merge requests.",
+        "Places real platform and recovery claims behind explicit staging gates.",
+        "Requires exact inventory, secret-safe evidence, and post-action re-observation."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Testing"
+  short_description: "Risk-driven Rust testing and verification"
+  default_prompt: "Use $rust-testing to design and verify the Rust tests for this change."
