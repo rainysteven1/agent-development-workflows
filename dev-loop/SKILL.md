@@ -93,6 +93,12 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   evidence by itself.
 - Give every increment one independently reviewable reason to change and its
   own acceptance check.
+- Before the first review, freeze the feature's acceptance checks, direct
+  consumers, trust boundaries, and autonomous remediation budget. Unless the
+  repository or user sets a smaller limit, allow at most two remediation
+  commits for one feature group: one initial review plus at most two fixup
+  reviews, three review verdicts total. Increasing that limit requires explicit
+  user direction after reporting why the first budget did not converge.
 - Order increments so each committed state remains buildable and includes the
   tests and generated artifacts required for that state.
 - Do not create WIP, placeholder, knowingly failing, or cleanup-only commits to
@@ -143,6 +149,36 @@ For each increment, finish this loop before starting the next:
     original receipts. For a Plane-managed task, record the original-to-final
     mapping with `phase-record-history-rewrite` before continuing. A tree change
     makes the squashed result a new commit requiring verification and OCR.
+
+### Bound review convergence
+
+Reviewer severity does not expand the feature contract. Classify each finding
+against the acceptance checks, direct effects, and trust boundaries frozen
+before review:
+
+- `blocking`: reproducible evidence shows the current change violates that
+  contract; remediate it within the remaining budget.
+- `duplicate`: the same root cause is already fixed or recorded; disposition it
+  as dismissed with the earlier finding identity.
+- `out_of_scope`: it requires a new consumer, attacker capability, architecture,
+  or product behavior; record the boundary and do not change this feature.
+- `speculative`: no current source, test, or runtime evidence demonstrates the
+  failure; dismiss it with the missing proof and observable reopen condition.
+
+Only a blocking finding creates another fixup/review round. A reviewer that
+restates the same concern at a narrower race window without new evidence is no
+progress, not a new round. Infrastructure retries do not consume remediation
+rounds, but remain bounded by `$open-code-review`.
+
+Deterministic acceptance checks, tests, and real usage decide whether the
+feature works. Review is an adversarial diagnostic gate, not an optimization
+objective; never use `findings == 0` as the loop condition.
+
+When the two-round remediation budget is exhausted, stop autonomous review
+iteration. If a reproducible in-scope blocker remains, keep the feature `not
+complete` and request a scope/budget decision; do not create a third fixup. If
+only duplicate, out-of-scope, or speculative findings remain, record their
+dispositions, accept the review gate, and continue to history convergence.
 
 When a check fails, stop this increment. Record the earliest actionable error,
 the demonstrated cause or labeled hypothesis, cleanup result, and next changed

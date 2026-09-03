@@ -45,6 +45,39 @@ an optional Luna second opinion is selected only for high-risk changes.
   modes that must be explicitly requested. None can substitute for a required per-commit gate or
   satisfy its Plane evidence contract.
 
+## Bounded finding convergence
+
+Freeze the reviewed feature's acceptance checks, direct consumers, trust
+boundaries, and remediation budget in the first packet. A reviewer may find a
+violation of that contract; it may not silently widen the contract or threat
+model. The default autonomous budget is two remediation commits per feature
+group: one initial verdict plus at most two fixup verdicts, three review
+iterations total. A repository may lower it. Only the user may authorize
+another round after the exhausted budget and remaining blocker are reported.
+
+Normalize findings by root cause and stable path/rule identity before deciding
+another commit:
+
+- Fix a demonstrated, reproducible acceptance or direct-effect violation.
+- Dismiss a duplicate with the prior finding/fix revision.
+- Mark a finding `out_of_scope` when it requires a new attacker capability,
+  trust boundary, consumer, architecture, or requested behavior.
+- Dismiss a speculative finding when it has no current source/test/runtime
+  proof; record the evidence that would reopen it.
+
+Only the first category consumes a remediation round. A narrower variant of the
+same already-dispositioned race or hypothetical is not progress and must not
+start another review. When the budget is exhausted, return one terminal
+synthesis: unresolved in-scope blockers mean `not complete` and require user
+direction; otherwise preserve dispositions and accept. Never use repeated
+review calls as a substitute for that synthesis.
+
+Tests, explicit acceptance checks, and real usage are the convergence oracle;
+zero reviewer findings is not. A timeout or interruption may resume the same
+immutable OCR session once and does not consume a remediation round. If that
+single resume also fails, preserve the artifacts and return `unavailable`; do
+not start another equivalent review session automatically.
+
 ## Full-Context-First Fallback Protocol
 
 When a task explicitly asks for a repository-wide or full-context review, use this
@@ -166,11 +199,13 @@ failed edge, preserved artifact, and next changed diagnostic variable.
 7. `terminal_state=complete` with full coverage is required; partial JSON or a zero exit code alone
    never passes. Record the OCR session ID and native manifest in the receipt.
 
-8. Disposition every finding. Until the increment is accepted, only remediation work may proceed.
-   Commit each acceptance-complete remediation separately, rerun its ordinary checks, and start a
-   new OCR manifest and fresh review for that commit. For high-risk changes, add a separate fresh Luna
-   second opinion; never carry coverage or synthesis across commits. Record which later commit resolves
-   each fixed finding; start the next planned increment only after the remediation chain is clean.
+8. Disposition every finding under the bounded convergence contract. Until the increment is accepted,
+   only in-scope remediation work may proceed. Commit each acceptance-complete remediation separately,
+   rerun its ordinary checks, and start a new OCR manifest and fresh review for that commit while the
+   feature budget remains. For high-risk changes, add a separate fresh Luna second opinion; never carry
+   coverage or synthesis across commits. Record which later commit resolves each fixed finding. Start
+   the next planned increment only after the remediation chain is accepted; an exhausted in-scope
+   blocker remains `not complete` and requires user direction.
 
 ## Commit Receipt And Plane Phase Evidence
 
