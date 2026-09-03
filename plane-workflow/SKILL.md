@@ -222,7 +222,29 @@ finding disposition. A remediation commit is the only allowed next commit while 
 unaccepted; it gets its own OCR receipt. Phase completion preserves these markers. Never reuse a
 session or defer recording until WP closure.
 
-After every direct Phase is Done, create or update one real GitLab MR per affected repository when
+When an accepted feature commit has one or more accepted `fixup!` remediation
+commits, autosquash that feature group before starting another independent
+feature. Copy `assets/history-rewrite.template.json`, preserve every original
+receipt under its original SHA, and record the content-neutral mapping with
+dry-run then apply:
+
+```bash
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-history-rewrite \
+  --repo "$PWD" --wp-id WP-01A --phase 1 --receipt /tmp/history-rewrite.json
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-history-rewrite \
+  --repo "$PWD" --wp-id WP-01A --phase 1 --receipt /tmp/history-rewrite.json --apply
+```
+
+The command requires a contiguous feature-plus-fixup chain, every original OCR
+marker plus its complete validated receipt on that Phase, fixup subjects
+targeting the root feature, an immediate final HEAD with the original
+parent/subject, and exact reviewed/final tree
+equality. It writes an additional provenance marker; it never rewrites or
+relabels an OCR receipt. Any failed invariant requires fresh verification and
+OCR for the resulting commit. GitLab whole-MR squash does not satisfy this
+feature-group contract.
+
+After all direct Phases are Done, create or update one real GitLab MR per affected repository when
 that handoff is authorized. Use `glab mr create` for the operator action and re-read each MR through
 the maintained helper:
 
@@ -233,7 +255,12 @@ python ~/.codex/skills/plane-workflow/scripts/gitlab_workflow.py inspect-mr \
 
 Render `assets/work-package-mr.template.json` with the exact MR URLs, opened state, base/head SHAs,
 inspection commands, and a complete commit-to-Phase mapping for each linear MR range. Every mapped
-commit must already have review evidence on that Phase. Record the MR set and move the WP to `Review`
+commit must already have review evidence or a validated history-only rewrite marker on that Phase.
+Embed the complete `commit_review_receipt` for an unchanged reviewed commit, or
+the complete `history_rewrite_receipt` for a rewritten commit, in its MR mapping.
+The CLI revalidates the receipt and recomputes the marker; a marker-shaped
+string alone is never evidence.
+Record the MR set and move the WP to `Review`
 with dry-run then apply:
 
 ```bash

@@ -1058,6 +1058,66 @@ class PlaneWorkflowTest(unittest.TestCase):
             f"{commit_revision}:{'e' * 64}</code></p>"
         )
 
+    def _append_review_receipt_marker(self, phase: dict, receipt: dict) -> None:
+        phase["description_html"] += (
+            f"<p><code>{plane_workflow.commit_review_marker(receipt)}</code></p>"
+        )
+
+    def _append_mr_receipt_markers(self, phases: list[dict], receipt: dict) -> None:
+        for merge_request in receipt["merge_requests"]:
+            for mapping in merge_request["commits"]:
+                review = mapping.get("commit_review_receipt")
+                if isinstance(review, dict):
+                    self._append_review_receipt_marker(phases[mapping["phase"]], review)
+
+    def _history_rewrite_receipt(self) -> dict:
+        feature_review = self._commit_receipt(
+            parent="a" * 40,
+            commit="b" * 40,
+            session="/root/wp01a_backend_feature_review",
+        )
+        fixup_review = self._commit_receipt(
+            parent="b" * 40,
+            commit="c" * 40,
+            session="/root/wp01a_backend_fixup_review",
+        )
+        return {
+            "schema_version": 1,
+            "wp_id": "WP-01A",
+            "phase": 0,
+            "operation": "feature-autosquash",
+            "result": "history-only",
+            "repository": "group/backend",
+            "repository_path": "/repo/backend",
+            "original_parent_revision": "a" * 40,
+            "reviewed_head_revision": "c" * 40,
+            "original_commits": [
+                {
+                    "commit_revision": "b" * 40,
+                    "parent_revision": "a" * 40,
+                    "role": "feature",
+                    "review_receipt": feature_review,
+                },
+                {
+                    "commit_revision": "c" * 40,
+                    "parent_revision": "b" * 40,
+                    "role": "fixup",
+                    "review_receipt": fixup_review,
+                },
+            ],
+            "final_parent_revision": "a" * 40,
+            "final_commit_revision": "d" * 40,
+            "reviewed_tree_revision": "e" * 40,
+            "final_tree_revision": "e" * 40,
+            "verification_commands": [
+                f"git rev-parse {'c' * 40}^{{tree}}",
+                f"git rev-parse {'d' * 40}^{{tree}}",
+            ],
+            "operator": "codex-builder",
+            "recorded_at": "2026-09-03T12:00:00+08:00",
+            "summary": "Autosquash preserved the complete reviewed feature tree byte for byte.",
+        }
+
     def _mr_receipt(self) -> dict:
         return {
             "schema_version": 1,
@@ -1071,7 +1131,17 @@ class PlaneWorkflowTest(unittest.TestCase):
                     "base_revision": "a" * 40,
                     "head_revision": "b" * 40,
                     "verification_command": "python gitlab_workflow.py inspect-mr --iid 7",
-                    "commits": [{"commit_revision": "b" * 40, "phase": 0}],
+                    "commits": [
+                        {
+                            "commit_revision": "b" * 40,
+                            "phase": 0,
+                            "commit_review_receipt": self._commit_receipt(
+                                parent="a" * 40,
+                                commit="b" * 40,
+                                session="/root/wp01a_backend_direct_review",
+                            ),
+                        }
+                    ],
                 },
                 {
                     "repository": "group/frontend",
@@ -1081,7 +1151,20 @@ class PlaneWorkflowTest(unittest.TestCase):
                     "base_revision": "c" * 40,
                     "head_revision": "d" * 40,
                     "verification_command": "python gitlab_workflow.py inspect-mr --iid 8",
-                    "commits": [{"commit_revision": "d" * 40, "phase": 1}],
+                    "commits": [
+                        {
+                            "commit_revision": "d" * 40,
+                            "phase": 1,
+                            "commit_review_receipt": self._commit_receipt(
+                                repository="group/frontend",
+                                repository_path="/repo/frontend",
+                                phase=1,
+                                parent="c" * 40,
+                                commit="d" * 40,
+                                session="/root/wp01a_frontend_direct_review",
+                            ),
+                        }
+                    ],
                 },
             ],
             "result": "opened",
@@ -1270,52 +1353,387 @@ class PlaneWorkflowTest(unittest.TestCase):
             plane_workflow.validate_phase_completion(current, without_session)
         self.assertTrue(plane_workflow.validate_phase_completion(current, final)["complete"])
 
+    def test_history_rewrite_validates_feature_fixups_and_tree_equality(self) -> None:
+        receipt = self._history_rewrite_receipt()
+        parents = {
+            "b" * 40: "a" * 40,
+            "c" * 40: "b" * 40,
+            "d" * 40: "a" * 40,
+        }
+        subjects = {
+            "b" * 40: "feat(skills): add lifecycle",
+            "c" * 40: "fixup! feat(skills): add lifecycle",
+            "d" * 40: "feat(skills): add lifecycle",
+        }
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_commit_subject", side_effect=lambda _path, commit: subjects[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_tree_revision", return_value="e" * 40
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", return_value="d" * 40
+        ), mock.patch.object(
+            plane_workflow, "git_repository_slug", return_value="group/backend"
+        ):
+            normalized = plane_workflow.validate_history_rewrite_receipt(
+                receipt, wp_id="WP-01A", phase_number=0
+            )
+            self.assertEqual("d" * 40, normalized["final_commit_revision"])
+            with self.assertRaisesRegex(plane_workflow.WorkflowError, "tree revisions do not match"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    {**receipt, "final_tree_revision": "f" * 40},
+                    wp_id="WP-01A",
+                    phase_number=0,
+                )
+
+            invalid_subjects = {**subjects, "c" * 40: "fixup! feat(skills): other feature"}
+            with mock.patch.object(
+                plane_workflow,
+                "git_commit_subject",
+                side_effect=lambda _path, commit: invalid_subjects[commit],
+            ), self.assertRaisesRegex(plane_workflow.WorkflowError, "does not target"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    receipt, wp_id="WP-01A", phase_number=0
+                )
+
+            with self.assertRaisesRegex(plane_workflow.WorkflowError, "preserve the feature"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    {**receipt, "final_parent_revision": "9" * 40},
+                    wp_id="WP-01A",
+                    phase_number=0,
+                )
+
+            with mock.patch.object(
+                plane_workflow, "current_git_revision", return_value="9" * 40
+            ), self.assertRaisesRegex(plane_workflow.WorkflowError, "immediately"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    receipt, wp_id="WP-01A", phase_number=0
+                )
+
+            original_final = {
+                **receipt,
+                "final_commit_revision": "b" * 40,
+                "final_tree_revision": "e" * 40,
+            }
+            parents_with_original = {**parents, "b" * 40: "a" * 40}
+            with mock.patch.object(
+                plane_workflow,
+                "git_commit_parent",
+                side_effect=lambda _path, commit: parents_with_original[commit],
+            ), mock.patch.object(
+                plane_workflow, "current_git_revision", return_value="b" * 40
+            ), self.assertRaisesRegex(plane_workflow.WorkflowError, "distinct"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    original_final, wp_id="WP-01A", phase_number=0
+                )
+
+            with mock.patch.object(
+                plane_workflow, "git_repository_slug", return_value="group/other"
+            ), self.assertRaisesRegex(plane_workflow.WorkflowError, "does not match"):
+                plane_workflow.validate_history_rewrite_receipt(
+                    receipt, wp_id="WP-01A", phase_number=0
+                )
+
+    def test_history_rewrite_record_is_idempotent_and_satisfies_mr_mapping(self) -> None:
+        route, client, _, _, _, phases = self._wp_review_fixture()
+        rewrite_receipt = self._history_rewrite_receipt()
+        for item in rewrite_receipt["original_commits"]:
+            self._append_review_receipt_marker(phases[0], item["review_receipt"])
+        parents = {
+            "b" * 40: "a" * 40,
+            "c" * 40: "b" * 40,
+            "d" * 40: "a" * 40,
+            "f" * 40: "c" * 40,
+        }
+        subjects = {
+            "b" * 40: "feat(skills): add lifecycle",
+            "c" * 40: "fixup! feat(skills): add lifecycle",
+            "d" * 40: "feat(skills): add lifecycle",
+        }
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_commit_subject", side_effect=lambda _path, commit: subjects[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_tree_revision", return_value="e" * 40
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", return_value="d" * 40
+        ), mock.patch.object(
+            plane_workflow, "git_repository_slug", return_value="group/backend"
+        ):
+            bad_digest = self._history_rewrite_receipt()
+            bad_review = {
+                **bad_digest["original_commits"][0]["review_receipt"],
+                "summary": "A different but structurally valid review conclusion was supplied.",
+            }
+            bad_digest["original_commits"] = [
+                {**bad_digest["original_commits"][0], "review_receipt": bad_review},
+                bad_digest["original_commits"][1],
+            ]
+            with self.assertRaisesRegex(plane_workflow.WorkflowError, "lacks review evidence"):
+                plane_workflow.record_phase_history_rewrite(
+                    client, route, "WP-01A", 0, bad_digest, apply=False
+                )
+            applied = plane_workflow.record_phase_history_rewrite(
+                client, route, "WP-01A", 0, rewrite_receipt, apply=True
+            )
+            repeated = plane_workflow.record_phase_history_rewrite(
+                client, route, "WP-01A", 0, rewrite_receipt, apply=True
+            )
+        self.assertTrue(applied["verified"])
+        self.assertTrue(repeated["already_recorded"])
+
+        frontend_review = self._commit_receipt(
+            repository="group/frontend",
+            repository_path="/repo/frontend",
+            phase=1,
+            parent="c" * 40,
+            commit="f" * 40,
+            session="/root/wp01a_frontend_rewritten_peer",
+        )
+        self._append_review_receipt_marker(phases[1], frontend_review)
+        mr_receipt = self._mr_receipt()
+        backend = mr_receipt["merge_requests"][0]
+        backend["head_revision"] = "d" * 40
+        backend["commits"] = [
+            {
+                "commit_revision": "d" * 40,
+                "phase": 0,
+                "history_rewrite_receipt": rewrite_receipt,
+            }
+        ]
+        frontend = mr_receipt["merge_requests"][1]
+        frontend["head_revision"] = "f" * 40
+        frontend["commits"] = [
+            {
+                "commit_revision": "f" * 40,
+                "phase": 1,
+                "commit_review_receipt": frontend_review,
+            }
+        ]
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_commit_subject", side_effect=lambda _path, commit: subjects[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_tree_revision", return_value="e" * 40
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", return_value="d" * 40
+        ), mock.patch.object(
+            plane_workflow, "git_repository_slug", return_value="group/backend"
+        ), mock.patch.object(plane_workflow, "git_revision_is_ancestor", return_value=True):
+            normalized = plane_workflow.validate_mr_receipt(
+                mr_receipt,
+                wp_id="WP-01A",
+                expected_repositories={"group/backend", "group/frontend"},
+                phases=phases,
+                current_revisions={"/repo/backend": "d" * 40, "/repo/frontend": "f" * 40},
+                commit_chains={
+                    "/repo/backend": [("a" * 40, "d" * 40)],
+                    "/repo/frontend": [("c" * 40, "f" * 40)],
+                },
+            )
+        self.assertEqual("d" * 40, normalized["merge_requests"][0]["head_revision"])
+
+    def test_mr_mapping_preserves_two_same_repository_features(self) -> None:
+        _, _, _, _, _, phases = self._wp_review_fixture()
+        first = self._history_rewrite_receipt()
+        second_feature_review = self._commit_receipt(
+            phase=1,
+            parent="d" * 40,
+            commit="1" * 40,
+            session="/root/wp01a_backend_second_feature",
+        )
+        second_fixup_review = self._commit_receipt(
+            phase=1,
+            parent="1" * 40,
+            commit="2" * 40,
+            session="/root/wp01a_backend_second_fixup",
+        )
+        second = {
+            **self._history_rewrite_receipt(),
+            "phase": 1,
+            "original_parent_revision": "d" * 40,
+            "reviewed_head_revision": "2" * 40,
+            "original_commits": [
+                {
+                    "commit_revision": "1" * 40,
+                    "parent_revision": "d" * 40,
+                    "role": "feature",
+                    "review_receipt": second_feature_review,
+                },
+                {
+                    "commit_revision": "2" * 40,
+                    "parent_revision": "1" * 40,
+                    "role": "fixup",
+                    "review_receipt": second_fixup_review,
+                },
+            ],
+            "final_parent_revision": "d" * 40,
+            "final_commit_revision": "3" * 40,
+            "reviewed_tree_revision": "4" * 40,
+            "final_tree_revision": "4" * 40,
+        }
+        for item in first["original_commits"]:
+            self._append_review_receipt_marker(phases[0], item["review_receipt"])
+        for item in second["original_commits"]:
+            self._append_review_receipt_marker(phases[1], item["review_receipt"])
+
+        parents = {
+            "b" * 40: "a" * 40,
+            "c" * 40: "b" * 40,
+            "d" * 40: "a" * 40,
+            "1" * 40: "d" * 40,
+            "2" * 40: "1" * 40,
+            "3" * 40: "d" * 40,
+        }
+        subjects = {
+            "b" * 40: "feat(skills): first",
+            "c" * 40: "fixup! feat(skills): first",
+            "d" * 40: "feat(skills): first",
+            "1" * 40: "feat(skills): second",
+            "2" * 40: "fixup! feat(skills): second",
+            "3" * 40: "feat(skills): second",
+        }
+        trees = {
+            "c" * 40: "e" * 40,
+            "d" * 40: "e" * 40,
+            "2" * 40: "4" * 40,
+            "3" * 40: "4" * 40,
+        }
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_commit_subject", side_effect=lambda _path, commit: subjects[commit]
+        ), mock.patch.object(
+            plane_workflow, "git_tree_revision", side_effect=lambda _path, commit: trees[commit]
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", return_value="3" * 40
+        ), mock.patch.object(
+            plane_workflow, "git_repository_slug", return_value="group/backend"
+        ), mock.patch.object(plane_workflow, "git_revision_is_ancestor", return_value=True):
+            first_normalized = plane_workflow.validate_history_rewrite_receipt(
+                first, wp_id="WP-01A", phase_number=0, require_current_head=False
+            )
+            second_normalized = plane_workflow.validate_history_rewrite_receipt(
+                second, wp_id="WP-01A", phase_number=1, require_current_head=False
+            )
+            phases[0]["description_html"] += plane_workflow.render_history_rewrite_evidence(
+                first_normalized
+            )
+            phases[1]["description_html"] += plane_workflow.render_history_rewrite_evidence(
+                second_normalized
+            )
+            mr_receipt = {
+                "schema_version": 1,
+                "wp_id": "WP-01A",
+                "merge_requests": [
+                    {
+                        "repository": "group/backend",
+                        "repository_path": "/repo/backend",
+                        "url": "https://git.example/group/backend/-/merge_requests/7",
+                        "state": "opened",
+                        "base_revision": "a" * 40,
+                        "head_revision": "3" * 40,
+                        "verification_command": "python gitlab_workflow.py inspect-mr --iid 7",
+                        "commits": [
+                            {
+                                "commit_revision": "d" * 40,
+                                "phase": 0,
+                                "history_rewrite_receipt": first,
+                            },
+                            {
+                                "commit_revision": "3" * 40,
+                                "phase": 1,
+                                "history_rewrite_receipt": second,
+                            },
+                        ],
+                    }
+                ],
+                "result": "opened",
+                "summary": "Both independent backend features remain separate and fully mapped.",
+            }
+            normalized = plane_workflow.validate_mr_receipt(
+                mr_receipt,
+                wp_id="WP-01A",
+                expected_repositories={"group/backend"},
+                phases=phases,
+                current_revisions={"/repo/backend": "3" * 40},
+                commit_chains={
+                    "/repo/backend": [
+                        ("a" * 40, "d" * 40),
+                        ("d" * 40, "3" * 40),
+                    ]
+                },
+            )
+
+        self.assertEqual(2, len(normalized["merge_requests"][0]["commits"]))
+
     def test_mr_receipt_maps_exact_chain_to_reviewed_phases(self) -> None:
         _, _, _, _, _, phases = self._wp_review_fixture()
-        self._append_review_marker(phases[0], "group/backend", "b" * 40)
-        self._append_review_marker(phases[1], "group/frontend", "d" * 40)
+        receipt = self._mr_receipt()
+        self._append_mr_receipt_markers(phases, receipt)
         revisions = {"/repo/backend": "b" * 40, "/repo/frontend": "d" * 40}
         chains = {
             "/repo/backend": [("a" * 40, "b" * 40)],
             "/repo/frontend": [("c" * 40, "d" * 40)],
         }
-        normalized = plane_workflow.validate_mr_receipt(
-            self._mr_receipt(),
-            wp_id="WP-01A",
-            expected_repositories={"group/backend", "group/frontend"},
-            phases=phases,
-            current_revisions=revisions,
-            commit_chains=chains,
-        )
+        parents = {"b" * 40: "a" * 40, "d" * 40: "c" * 40}
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", side_effect=lambda path: revisions[path]
+        ):
+            normalized = plane_workflow.validate_mr_receipt(
+                receipt,
+                wp_id="WP-01A",
+                expected_repositories={"group/backend", "group/frontend"},
+                phases=phases,
+                current_revisions=revisions,
+                commit_chains=chains,
+            )
         self.assertEqual(2, len(normalized["merge_requests"]))
         bool_phase = self._mr_receipt()
         bool_phase["merge_requests"][0]["commits"][0]["phase"] = True
         with self.assertRaisesRegex(plane_workflow.WorkflowError, "does not match"):
-            plane_workflow.validate_mr_receipt(
-                bool_phase,
-                wp_id="WP-01A",
-                expected_repositories={"group/backend", "group/frontend"},
-                phases=phases,
-                current_revisions=revisions,
-                commit_chains=chains,
-            )
+            with mock.patch.object(
+                plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+            ), mock.patch.object(
+                plane_workflow, "current_git_revision", side_effect=lambda path: revisions[path]
+            ):
+                plane_workflow.validate_mr_receipt(
+                    bool_phase,
+                    wp_id="WP-01A",
+                    expected_repositories={"group/backend", "group/frontend"},
+                    phases=phases,
+                    current_revisions=revisions,
+                    commit_chains=chains,
+                )
         phases[1]["description_html"] = phases[1]["description_html"].replace(
             plane_workflow.COMMIT_REVIEW_MARKER_PREFIX, "missing:"
         )
-        with self.assertRaisesRegex(plane_workflow.WorkflowError, "lacks review evidence"):
-            plane_workflow.validate_mr_receipt(
-                self._mr_receipt(),
-                wp_id="WP-01A",
-                expected_repositories={"group/backend", "group/frontend"},
-                phases=phases,
-                current_revisions=revisions,
-                commit_chains=chains,
-            )
+        with self.assertRaisesRegex(
+            plane_workflow.WorkflowError, "invalid review evidence"
+        ):
+            with mock.patch.object(
+                plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+            ), mock.patch.object(
+                plane_workflow, "current_git_revision", side_effect=lambda path: revisions[path]
+            ):
+                plane_workflow.validate_mr_receipt(
+                    receipt,
+                    wp_id="WP-01A",
+                    expected_repositories={"group/backend", "group/frontend"},
+                    phases=phases,
+                    current_revisions=revisions,
+                    commit_chains=chains,
+                )
 
     def test_wp_review_means_mrs_exist_and_done_requires_merged_receipt(self) -> None:
         route, client, module, requirement, work_package, phases = self._wp_review_fixture()
-        self._append_review_marker(phases[0], "group/backend", "b" * 40)
-        self._append_review_marker(phases[1], "group/frontend", "d" * 40)
+        receipt = self._mr_receipt()
+        self._append_mr_receipt_markers(phases, receipt)
         revisions = {"/repo/backend": "b" * 40, "/repo/frontend": "d" * 40}
         chains = {
             "/repo/backend": [("a" * 40, "b" * 40)],
@@ -1325,9 +1743,16 @@ class PlaneWorkflowTest(unittest.TestCase):
             plane_workflow, "current_git_revision", side_effect=lambda path: revisions[path]
         ), mock.patch.object(
             plane_workflow, "git_commit_chain", side_effect=lambda path, _base, _head: chains[path]
+        ), mock.patch.object(
+            plane_workflow,
+            "git_commit_parent",
+            side_effect=lambda path, commit: {
+                ("/repo/backend", "b" * 40): "a" * 40,
+                ("/repo/frontend", "d" * 40): "c" * 40,
+            }[(path, commit)],
         ):
             review = plane_workflow.start_work_package_review(
-                client, route, "WP-01A", self._mr_receipt(), apply=True
+                client, route, "WP-01A", receipt, apply=True
             )
         self.assertTrue(review["verified"])
         self.assertEqual("review", work_package["state"])

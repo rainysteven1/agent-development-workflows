@@ -24,6 +24,8 @@ Before offering or executing an integration action, require:
 - any required external gate, receipt, approval, or deployment prerequisite
 - canonical worktree and managed index baseline revision when repository
   evidence was inherited by the task worktree
+- final feature commits with no remaining `fixup!` commits, plus every
+  history-only original-to-final provenance marker when autosquash was used
 
 If a required item is absent or stale, return to `$dev-loop`. Do not interpret
 "implementation looks finished" as evidence.
@@ -90,6 +92,11 @@ passed:
 - no blocking review finding remains
 - required planning receipt or state update has been written and re-read
 - mergeability and repository policy permit the selected merge method
+
+Do not enable GitLab MR-level squash when the verified range intentionally
+contains multiple independent feature commits. Their feature-group convergence
+must already be complete on the source branch; MR squash would destroy those
+boundaries and invalidate the recorded mapping.
 
 Re-read the source head after checking the gates. If it changed, stop and
 invalidate the older CI, review, and receipt evidence.

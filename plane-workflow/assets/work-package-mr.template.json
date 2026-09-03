@@ -14,7 +14,9 @@
       "commits": [
         {
           "commit_revision": "CHANGE-ME-FULL-COMMIT-SHA",
-          "phase": 0
+          "phase": 0,
+          "commit_review_receipt": "COPY-COMPLETE-COMMIT-REVIEW-RECEIPT-HERE",
+          "history_rewrite_receipt": null
         }
       ]
     }

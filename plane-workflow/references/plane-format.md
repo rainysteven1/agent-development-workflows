@@ -129,7 +129,8 @@ Do not use:
 - After all direct Phase children are Done and every real MR is created and recorded, set the WP to
   Review. Review means the MR set awaits merge; it never starts a WP-wide reviewer.
 - Keep OCR out of CI. Every material commit must already have its own immutable parent-to-commit OCR
-  manifest, unique Luna Max reviewer, bounded batches, same-session synthesis, and dispositions.
+  manifest, complete bounded coverage, same-session synthesis, and dispositions. Add a fresh Luna
+  second opinion only for the high-risk cases defined by `$open-code-review`.
 - Set the WP Done only after every recorded MR is re-read as merged and post-merge regression plus
   real usage pass against the exact target revisions.
 - Set the Module completed only after all Work Packages in the requirement are complete.

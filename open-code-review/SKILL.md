@@ -22,6 +22,12 @@ an optional Luna second opinion is selected only for high-risk changes.
   `--preview`. Require `terminal_state=complete`, every preview file in completed coverage, no
   failed/budget-skipped item, and disposition every finding. Record OCR version, provider, model,
   effort, session ID, rule fingerprint, and both SHAs.
+- If preview marks a material changed file unsupported, excluded, or otherwise
+  unreviewable, do not call that complete coverage. Preserve the OCR preview and
+  use `ocr delegate preview` for the same immutable commit plus one fresh
+  read-only Luna review of exactly those files. Record its session, terminal
+  conclusion, coverage, and dispositions beside the formal OCR receipt. A
+  silently skipped material file keeps the gate incomplete.
 - For high-risk changes only, run one additional fresh Luna session against the same immutable
   packet. It is a second opinion and never replaces the OCR verdict.
 - Keep the reviewer scoped to the requested diff and direct consumers. Do not expand into unrelated
@@ -32,8 +38,9 @@ an optional Luna second opinion is selected only for high-risk changes.
   acceptance. Preserve its artifacts and retry only after changing packet scope or invocation.
 - A provider-capacity failure before any review reasoning may be retried once after 15 seconds with
   a fresh output prefix; both attempts must remain inside the original packet budget. A second
-  capacity failure is `unavailable`, not a reason to switch model or keep polling. The pre-response
-  Max watchdog is handled only by the explicit XHigh fallback above.
+  capacity failure is `unavailable`, not a reason to switch model or keep polling. The bundled
+  runner's pre-response Max watchdog may use its explicit XHigh fallback within the same total
+  budget; ordinary `ocr review` retries do not invent that fallback.
 - Treat workspace, multi-commit, MR-range, and Work-Package-range review as optional diagnostic
   modes that must be explicitly requested. None can substitute for a required per-commit gate or
   satisfy its Plane evidence contract.
@@ -179,12 +186,12 @@ may name a later remediation commit; every such remediation commit still needs i
 The WP later verifies that every commit in each real MR range is mapped to exactly one Phase with a
 recorded review marker. Plane WP `Review` means those MRs exist; it never starts a WP-wide reviewer.
 
-## History-Only Squash After Acceptance
+## Feature-group autosquash after acceptance
 
-After every development commit in one logical change has a complete accepted
-review and all findings are dispositioned, the branch may be squashed for
-history hygiene without rerunning code review only when the squash is proven to
-be content-neutral.
+After one feature commit and all of its `fixup!` remediation commits have
+complete accepted reviews and dispositioned findings, converge that group
+before starting another independent feature. Never squash an entire WP, Phase,
+branch, or MR merely because it is one delivery container.
 
 Treat a squash as `history-only` only if all of the following hold:
 
@@ -197,24 +204,31 @@ Treat a squash as `history-only` only if all of the following hold:
 - the target did not move in a way that introduced additional content, and no
   unresolved conflict or manual edit changed the reviewed tree; and
 - every original commit has its own complete receipt and a dispositioned finding
-  chain.
+  chain;
+- every remediation subject targets the root feature commit with `fixup!`, the
+  group is still at branch tip, and autosquash produces exactly one commit with
+  the original feature parent and subject; and
+- no later independent commit has had its parent-to-commit review boundary
+  rewritten.
 
-Under these conditions, do not invent a new OCR receipt for the squash. Preserve
-the original receipts unchanged and record a Plane Phase provenance marker with:
+Under these conditions, do not invent a new OCR receipt for the final feature
+commit. Preserve the original receipts unchanged and record a Plane Phase
+provenance marker with:
 
 - all original reviewed commit SHAs and their parent SHAs;
 - the final squashed commit SHA and its parent SHA;
 - the reviewed and squashed tree SHAs plus the exact equality command/output;
-- the marker `history-only squash`, the operator, and the timestamp; and
+- the marker `history-only feature autosquash`, the operator, and the timestamp; and
 - the statement that no source tree changed and the original receipts remain
   bound to their original commits.
 
-The squash is a new Git object, so old receipts must never be relabeled as if
+The final commit is a new Git object, so old receipts must never be relabeled as if
 they were generated for the new SHA. If tree equality, target stability, or
 authorization cannot be proven, treat the result as a new commit increment:
 run preview and formal `ocr review --commit` again, then obtain any required
 Luna second opinion. The same rule applies to a rebase, conflict resolution,
-generated-file refresh, or any other operation that changes the final tree.
+generated-file refresh, delayed reordering across another feature, or any other
+operation that changes the final tree or reviewed commit boundary.
 
 ## Commit Boundary
 

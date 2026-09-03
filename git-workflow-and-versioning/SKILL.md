@@ -98,9 +98,43 @@ Finish implementation and its targeted verification before staging. Then:
    user unless explicitly authorized.
 6. Record `git rev-parse HEAD` and verify no intended staged change remains.
 
+For a review-remediation commit, keep the same atomic staging checks but use
+`git commit --fixup=<feature-commit>` instead of generating a new independent
+message. Target the root feature commit, not a previous fixup. The fixup still
+receives its own ordinary verification and immutable per-commit review.
+
 If the staged diff mixes reasons to change, unstage only task-owned paths or
 hunks and split it before committing. Never use a destructive reset as routine
 workflow recovery.
+
+## Converge one feature group
+
+A feature group is one independently meaningful feature commit followed only by
+its review/CI remediation fixups. Do not include another feature merely because
+it belongs to the same Phase, Work Package, branch, or Merge Request.
+
+After the feature and every fixup have accepted review evidence, and before
+starting the next feature:
+
+1. Require a private, unpushed branch or explicit authorization to rewrite the
+   shared branch. Record the feature parent, every original SHA/parent, the
+   reviewed head, and its tree ID.
+2. Run interactive rebase with `--autosquash` from the feature parent. Do not
+   reorder or edit another independent commit.
+3. Require exactly one resulting feature commit with the original feature
+   parent and subject. Compare its tree ID with the recorded reviewed-head tree;
+   any difference, conflict resolution, generated change, or target movement
+   invalidates history-only treatment.
+4. Preserve every original review receipt under its original SHA. When Plane
+   manages the task, record the original group to final SHA mapping through its
+   maintained history-rewrite receipt before another feature commit.
+
+If the group is no longer at branch tip because later independent work exists,
+do not autosquash it opportunistically: the rewrite changes later
+parent-to-commit review ranges. Either retain the reviewed history or obtain
+explicit authority and re-verify/re-review every invalidated later boundary.
+GitLab MR-level squash is not a replacement because it collapses all commits in
+the MR instead of preserving independent feature groups.
 
 ## Inspect the complete branch
 
@@ -127,9 +161,9 @@ current head.
 - Re-run checks affected by the resolution and inspect the resulting range.
 - Do not force-push, rewrite shared history, delete branches, or discard a
   worktree without explicit authorization and exact target verification.
-- Prefer additive follow-up commits for an already reviewed or shared branch.
-  Rewrite only when the branch is proven private and the user requested clean
-  history.
+- Prefer additive follow-up commits for shared history. Feature-group
+  autosquash is permitted only under the private/explicit-authority and
+  tree-equality contract above.
 
 ## Versioning and releases
 

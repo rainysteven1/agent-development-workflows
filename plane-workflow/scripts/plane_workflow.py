@@ -41,6 +41,7 @@ COMMIT_REVIEW_MODEL = ""
 COMMIT_REVIEW_REASONING_EFFORT = ""
 COMMIT_REVIEW_MARKER_PREFIX = "plane-workflow:commit-review:v1:"
 REVIEWER_SESSION_MARKER_PREFIX = "plane-workflow:reviewer-session:v1:"
+HISTORY_REWRITE_MARKER_PREFIX = "plane-workflow:history-rewrite:v1:"
 WP_MR_MARKER_PREFIX = "plane-workflow:wp-mr:v1:"
 WP_MERGE_MARKER_PREFIX = "plane-workflow:wp-merge:v1:"
 SAFE_READ_ATTEMPTS = 3
@@ -564,7 +565,7 @@ def validate_phase_completion(current_html: str, final_html: str) -> dict[str, A
         raise WorkflowError("final Phase description must contain non-placeholder 实际证据")
     current_review_markers = set(
         re.findall(
-            r"plane-workflow:(?:commit-review|reviewer-session):v1:[^<\s]+",
+            r"plane-workflow:(?:commit-review|reviewer-session|history-rewrite):v1:[^<\s]+",
             current_html,
         )
     )
@@ -1756,6 +1757,55 @@ def git_commit_parent(repository: str, commit_revision: str) -> str:
     return tokens[1]
 
 
+def git_commit_subject(repository: str, commit_revision: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", repository, "show", "-s", "--format=%s", commit_revision],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    subject = completed.stdout.strip()
+    if completed.returncode != 0 or not subject:
+        raise WorkflowError(f"cannot resolve commit subject for {commit_revision}")
+    return subject
+
+
+def git_tree_revision(repository: str, commit_revision: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", repository, "rev-parse", f"{commit_revision}^{{tree}}"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    revision = completed.stdout.strip().lower()
+    if completed.returncode != 0 or not GIT_REVISION_RE.fullmatch(revision):
+        raise WorkflowError(f"cannot resolve tree for {commit_revision}")
+    return revision
+
+
+def git_repository_slug(repository: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", repository, "remote", "get-url", "origin"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    remote = completed.stdout.strip()
+    if completed.returncode != 0 or not remote:
+        raise WorkflowError(f"cannot resolve origin repository identity for {repository}")
+    if re.match(r"^[^/@\s]+@[^/:\s]+:", remote):
+        path = remote.split(":", 1)[1]
+    else:
+        parsed = urllib.parse.urlparse(remote)
+        if parsed.scheme not in {"http", "https", "ssh"} or not parsed.hostname:
+            raise WorkflowError(f"origin for {repository} is not a forge repository URL")
+        path = parsed.path
+    slug = path.strip("/").removesuffix(".git")
+    if not REPOSITORY_SLUG_RE.fullmatch(slug):
+        raise WorkflowError(f"cannot derive a canonical repository slug for {repository}")
+    return slug
+
+
 def git_revision_is_ancestor(
     repository: str, ancestor_revision: str, descendant_revision: str
 ) -> bool:
@@ -1969,6 +2019,7 @@ def validate_commit_review_receipt(
     *,
     wp_id: str,
     phase_number: int,
+    require_contained: bool = True,
 ) -> dict[str, Any]:
     if receipt.get("schema_version") != 1 or receipt.get("template") is True:
         raise WorkflowError("commit review receipt must be an executable schema_version 1 receipt")
@@ -2008,7 +2059,9 @@ def validate_commit_review_receipt(
     if git_commit_parent(repository_path, commit_revision) != parent_revision:
         raise WorkflowError("commit review receipt parent_revision is not the commit's exact parent")
     current_revision = current_git_revision(repository_path)
-    if not git_revision_is_ancestor(repository_path, commit_revision, current_revision):
+    if require_contained and not git_revision_is_ancestor(
+        repository_path, commit_revision, current_revision
+    ):
         raise WorkflowError("commit review receipt commit is not contained by the checkout HEAD")
     if review_mode == "ocr":
         if not session_id or not re.fullmatch(r"[A-Za-z0-9-]{16,}", session_id):
@@ -2183,6 +2236,273 @@ def record_phase_commit_review(
     }
 
 
+def validate_history_rewrite_receipt(
+    receipt: dict[str, Any],
+    *,
+    wp_id: str,
+    phase_number: int,
+    require_current_head: bool = True,
+) -> dict[str, Any]:
+    if receipt.get("schema_version") != 1 or receipt.get("template") is True:
+        raise WorkflowError("history rewrite receipt must be an executable schema_version 1 receipt")
+    expected = {
+        "wp_id": wp_id,
+        "phase": phase_number,
+        "operation": "feature-autosquash",
+        "result": "history-only",
+    }
+    for key, value in expected.items():
+        if receipt.get(key) != value:
+            raise WorkflowError(f"history rewrite receipt {key} must equal {value!r}")
+
+    repository = str(receipt.get("repository", "")).strip().strip("/")
+    repository_path = str(receipt.get("repository_path", "")).strip()
+    original_parent = str(receipt.get("original_parent_revision", "")).lower()
+    reviewed_head = str(receipt.get("reviewed_head_revision", "")).lower()
+    final_parent = str(receipt.get("final_parent_revision", "")).lower()
+    final_commit = str(receipt.get("final_commit_revision", "")).lower()
+    reviewed_tree = str(receipt.get("reviewed_tree_revision", "")).lower()
+    final_tree = str(receipt.get("final_tree_revision", "")).lower()
+    if not REPOSITORY_SLUG_RE.fullmatch(repository):
+        raise WorkflowError("history rewrite receipt needs a canonical repository slug")
+    if not Path(repository_path).is_absolute():
+        raise WorkflowError("history rewrite receipt repository_path must be absolute")
+    if git_repository_slug(repository_path) != repository:
+        raise WorkflowError("history rewrite repository does not match repository_path")
+    revisions = (
+        original_parent,
+        reviewed_head,
+        final_parent,
+        final_commit,
+        reviewed_tree,
+        final_tree,
+    )
+    if any(not GIT_REVISION_RE.fullmatch(value) for value in revisions):
+        raise WorkflowError("history rewrite receipt revisions must be full Git SHAs")
+    if final_parent != original_parent:
+        raise WorkflowError("history rewrite must preserve the feature commit parent")
+    if git_commit_parent(repository_path, final_commit) != final_parent:
+        raise WorkflowError("history rewrite final parent does not match the final commit")
+    current_revision = current_git_revision(repository_path)
+    if require_current_head and current_revision != final_commit:
+        raise WorkflowError("history rewrite must be recorded immediately at the squashed HEAD")
+    if not require_current_head and not git_revision_is_ancestor(
+        repository_path, final_commit, current_revision
+    ):
+        raise WorkflowError("history rewrite final commit is not contained by the checkout HEAD")
+
+    original_commits = receipt.get("original_commits")
+    if not isinstance(original_commits, list) or len(original_commits) < 2:
+        raise WorkflowError("history rewrite needs one feature commit and at least one fixup commit")
+    normalized_commits = []
+    expected_parent = original_parent
+    feature_subject = ""
+    for index, item in enumerate(original_commits):
+        if not isinstance(item, dict):
+            raise WorkflowError(f"history rewrite original commit {index} must be an object")
+        commit = str(item.get("commit_revision", "")).lower()
+        parent = str(item.get("parent_revision", "")).lower()
+        role = str(item.get("role", ""))
+        review_receipt = item.get("review_receipt")
+        expected_role = "feature" if index == 0 else "fixup"
+        if role != expected_role:
+            raise WorkflowError(
+                f"history rewrite original commit {index} role must be {expected_role}"
+            )
+        if not GIT_REVISION_RE.fullmatch(commit) or not GIT_REVISION_RE.fullmatch(parent):
+            raise WorkflowError("history rewrite original commits need full Git SHAs")
+        if not isinstance(review_receipt, dict):
+            raise WorkflowError("history rewrite original commit needs its complete review receipt")
+        normalized_review = validate_commit_review_receipt(
+            review_receipt,
+            wp_id=wp_id,
+            phase_number=phase_number,
+            require_contained=False,
+        )
+        if (
+            normalized_review["repository"] != repository
+            or normalized_review["repository_path"] != repository_path
+            or normalized_review["parent_revision"] != parent
+            or normalized_review["commit_revision"] != commit
+        ):
+            raise WorkflowError("history rewrite original review receipt does not match its commit")
+        if parent != expected_parent or git_commit_parent(repository_path, commit) != parent:
+            raise WorkflowError("history rewrite original commit chain is not contiguous")
+        subject = git_commit_subject(repository_path, commit)
+        if index == 0:
+            if subject.startswith(("fixup! ", "squash! ", "amend! ")):
+                raise WorkflowError("history rewrite feature commit cannot itself be a fixup")
+            feature_subject = subject
+        elif subject != f"fixup! {feature_subject}":
+            raise WorkflowError("history rewrite fixup does not target the feature commit")
+        normalized_commits.append(
+            {
+                "commit_revision": commit,
+                "parent_revision": parent,
+                "role": role,
+                "review_receipt": normalized_review,
+            }
+        )
+        expected_parent = commit
+    if reviewed_head != expected_parent:
+        raise WorkflowError("history rewrite reviewed head must be the final fixup commit")
+    if final_commit in {item["commit_revision"] for item in normalized_commits}:
+        raise WorkflowError("history rewrite final commit must be distinct from original commits")
+    if git_commit_subject(repository_path, final_commit) != feature_subject:
+        raise WorkflowError("history rewrite final commit must preserve the feature subject")
+
+    actual_reviewed_tree = git_tree_revision(repository_path, reviewed_head)
+    actual_final_tree = git_tree_revision(repository_path, final_commit)
+    if reviewed_tree != actual_reviewed_tree or final_tree != actual_final_tree:
+        raise WorkflowError("history rewrite receipt tree revisions do not match Git")
+    if reviewed_tree != final_tree:
+        raise WorkflowError("history rewrite changed the reviewed source tree")
+
+    commands = receipt.get("verification_commands")
+    if (
+        not isinstance(commands, list)
+        or len(commands) < 2
+        or any(not isinstance(command, str) or len(command.strip()) < 8 for command in commands)
+    ):
+        raise WorkflowError("history rewrite receipt needs concrete verification commands")
+    operator = str(receipt.get("operator", "")).strip()
+    if len(operator) < 2:
+        raise WorkflowError("history rewrite receipt needs an operator")
+    recorded_at = str(receipt.get("recorded_at", "")).strip()
+    try:
+        timestamp = dt.datetime.fromisoformat(recorded_at.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise WorkflowError("history rewrite receipt recorded_at must be ISO-8601") from error
+    if timestamp.tzinfo is None:
+        raise WorkflowError("history rewrite receipt recorded_at must include a timezone")
+    return {
+        **receipt,
+        "repository": repository,
+        "repository_path": repository_path,
+        "original_parent_revision": original_parent,
+        "reviewed_head_revision": reviewed_head,
+        "original_commits": normalized_commits,
+        "final_parent_revision": final_parent,
+        "final_commit_revision": final_commit,
+        "reviewed_tree_revision": reviewed_tree,
+        "final_tree_revision": final_tree,
+        "verification_commands": [command.strip() for command in commands],
+        "operator": operator,
+        "recorded_at": timestamp.isoformat(),
+        "summary": _evidence_summary(receipt.get("summary"), "history rewrite summary"),
+    }
+
+
+def history_rewrite_marker(receipt: dict[str, Any]) -> str:
+    return (
+        f"{HISTORY_REWRITE_MARKER_PREFIX}{receipt['repository']}:"
+        f"{receipt['final_commit_revision']}:{_receipt_digest(receipt)}"
+    )
+
+
+def render_history_rewrite_evidence(receipt: dict[str, Any]) -> str:
+    original = ", ".join(
+        f"{item['role']}:{item['commit_revision']}" for item in receipt["original_commits"]
+    )
+    return (
+        "<h3>History-only feature autosquash</h3>"
+        f"<p><code>{history_rewrite_marker(receipt)}</code></p>"
+        f"<p>仓库：<code>{html.escape(receipt['repository'])}</code>；原提交："
+        f"<code>{html.escape(original)}</code>；最终提交："
+        f"<code>{receipt['final_parent_revision']}..{receipt['final_commit_revision']}</code>。</p>"
+        f"<p>Tree equality：<code>{receipt['reviewed_tree_revision']}</code>；"
+        f"operator：<code>{html.escape(receipt['operator'])}</code>；"
+        f"recorded_at：<code>{html.escape(receipt['recorded_at'])}</code>。</p>"
+        f"<p>{html.escape(receipt['summary'])}</p>"
+    )
+
+
+def record_phase_history_rewrite(
+    client: PlaneClient,
+    route: dict[str, Any],
+    wp_id: str,
+    phase_number: int,
+    receipt: dict[str, Any],
+    *,
+    apply: bool,
+) -> dict[str, Any]:
+    project = client.project()
+    assert_project(route, project)
+    assert_active_project(project)
+    work_package, phases, _ = work_package_and_phases(client, route, wp_id)
+    phase = next(
+        (
+            item
+            for item in phases
+            if str(item.get("external_id", "")).endswith(f":{phase_number}")
+        ),
+        None,
+    )
+    if phase is None:
+        raise WorkflowError(f"Phase {phase_number} is not present in work-package:{wp_id}")
+    normalized = validate_history_rewrite_receipt(
+        receipt, wp_id=wp_id, phase_number=phase_number
+    )
+    expected_repositories = work_package_repositories(
+        work_package.get("description_html") or ""
+    )
+    if normalized["repository"] not in expected_repositories:
+        raise WorkflowError("history rewrite repository is not declared by the Work Package")
+
+    current_html = str(phase.get("description_html") or "")
+    for item in normalized["original_commits"]:
+        commit_marker = (
+            commit_review_marker(item["review_receipt"])
+        )
+        if commit_marker not in current_html:
+            raise WorkflowError(
+                f"history rewrite original commit {item['commit_revision']} lacks review evidence"
+            )
+        if any(
+            other["id"] != phase["id"]
+            and commit_marker in str(other.get("description_html") or "")
+            for other in phases
+        ):
+            raise WorkflowError("history rewrite original commit is recorded on another Phase")
+
+    marker = history_rewrite_marker(normalized)
+    final_prefix = (
+        f"{HISTORY_REWRITE_MARKER_PREFIX}{normalized['repository']}:"
+        f"{normalized['final_commit_revision']}:"
+    )
+    already_recorded = marker in current_html
+    if not already_recorded and any(
+        final_prefix in str(item.get("description_html") or "") for item in phases
+    ):
+        raise WorkflowError("history rewrite final commit already has different provenance")
+    final_html = (
+        current_html
+        if already_recorded
+        else current_html + render_history_rewrite_evidence(normalized)
+    )
+    action = None if already_recorded else {
+        "work_item_id": phase["id"],
+        "phase": phase_number,
+        "final_commit_revision": normalized["final_commit_revision"],
+    }
+    if apply and action:
+        client.request(
+            "PATCH",
+            f"{client.project_prefix}/work-items/{phase['id']}",
+            data={"description_html": final_html},
+        )
+        reread = client.retrieve_work_item(phase["id"])
+        if marker not in str(reread.get("description_html") or ""):
+            raise WorkflowError("Phase history rewrite PATCH was not confirmed by re-read")
+    return {
+        "action": action,
+        "already_recorded": already_recorded,
+        "applied": apply,
+        "verified": already_recorded or (apply and action is not None),
+        "work_package": f"work-package:{wp_id}",
+    }
+
+
 def validate_mr_receipt(
     receipt: dict[str, Any],
     *,
@@ -2264,16 +2584,64 @@ def validate_mr_receipt(
                     f"MR receipt {repository} commit mapping {position} does not match the Git chain or a Phase"
                 )
             phase_html = str(phase_by_number[phase_number].get("description_html") or "")
-            marker_pattern = re.escape(
-                f"{COMMIT_REVIEW_MARKER_PREFIX}{repository}:{commit}:"
+            rewrite_pattern = re.escape(
+                f"{HISTORY_REWRITE_MARKER_PREFIX}{repository}:{commit}:"
             ) + r"[0-9a-f]{64}"
-            if re.search(marker_pattern, phase_html) is None:
-                raise WorkflowError(
-                    f"MR receipt {repository} commit {commit} lacks review evidence in Phase {phase_number}"
+            direct_receipt = mapped.get("commit_review_receipt")
+            direct_review = isinstance(direct_receipt, dict)
+            if direct_review:
+                normalized_review = validate_commit_review_receipt(
+                    direct_receipt,
+                    wp_id=wp_id,
+                    phase_number=phase_number,
+                    require_contained=False,
                 )
-            normalized_commits.append(
-                {"commit_revision": commit, "parent_revision": parent, "phase": phase_number}
-            )
+                if (
+                    normalized_review["repository"] != repository
+                    or normalized_review["repository_path"] != repository_path
+                    or normalized_review["parent_revision"] != parent
+                    or normalized_review["commit_revision"] != commit
+                    or commit_review_marker(normalized_review) not in phase_html
+                ):
+                    raise WorkflowError(
+                        f"MR receipt {repository} commit {commit} has invalid review evidence"
+                    )
+            if not direct_review:
+                rewrite_receipt = mapped.get("history_rewrite_receipt")
+                if not isinstance(rewrite_receipt, dict):
+                    raise WorkflowError(
+                        f"MR receipt {repository} commit {commit} needs its history rewrite receipt"
+                    )
+                normalized_rewrite = validate_history_rewrite_receipt(
+                    rewrite_receipt,
+                    wp_id=wp_id,
+                    phase_number=phase_number,
+                    require_current_head=False,
+                )
+                if (
+                    normalized_rewrite["repository"] != repository
+                    or normalized_rewrite["repository_path"] != repository_path
+                    or normalized_rewrite["final_commit_revision"] != commit
+                    or history_rewrite_marker(normalized_rewrite) not in phase_html
+                    or re.search(rewrite_pattern, phase_html) is None
+                ):
+                    raise WorkflowError(
+                        f"MR receipt {repository} commit {commit} has invalid history rewrite evidence"
+                    )
+            if not direct_review and re.search(rewrite_pattern, phase_html) is None:
+                raise WorkflowError(
+                    f"MR receipt {repository} commit {commit} lacks review or history rewrite evidence in Phase {phase_number}"
+                )
+            normalized_mapping = {
+                "commit_revision": commit,
+                "parent_revision": parent,
+                "phase": phase_number,
+            }
+            if direct_review:
+                normalized_mapping["commit_review_receipt"] = normalized_review
+            else:
+                normalized_mapping["history_rewrite_receipt"] = normalized_rewrite
+            normalized_commits.append(normalized_mapping)
         seen_repositories.add(repository)
         seen_urls.add(url)
         normalized_items.append(
@@ -3148,20 +3516,20 @@ def build_parser() -> argparse.ArgumentParser:
     ledger.add_argument("--phase", type=int, required=True)
     summary = commands.add_parser("phase-summary", help="summarize Plane task-list HTML")
     summary.add_argument("--html-file", type=Path, required=True)
-    for name in ("inspect-project", "inspect-work-package", "sync-work-package", "verify-hierarchy", "phase-start", "phase-record-commit-review", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"):
+    for name in ("inspect-project", "inspect-work-package", "sync-work-package", "verify-hierarchy", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"):
         command = commands.add_parser(name)
         command.add_argument("--repo", type=Path, default=Path.cwd())
-        if name in {"inspect-work-package", "phase-start", "phase-record-commit-review", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "migrate-work-package-repositories"}:
+        if name in {"inspect-work-package", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "migrate-work-package-repositories"}:
             command.add_argument("--wp-id", required=True)
         if name in {"sync-work-package", "verify-hierarchy", "delete-unstarted-work-package"}:
             command.add_argument("plan", type=Path)
-        if name in {"sync-work-package", "phase-start", "phase-record-commit-review", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"}:
+        if name in {"sync-work-package", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"}:
             command.add_argument("--apply", action="store_true")
-        if name in {"phase-start", "phase-record-commit-review", "phase-complete"}:
+        if name in {"phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete"}:
             command.add_argument("--phase", type=int, required=True)
         if name == "phase-complete":
             command.add_argument("--html-file", type=Path, required=True)
-        if name in {"phase-record-commit-review", "work-package-review-start", "close-work-package"}:
+        if name in {"phase-record-commit-review", "phase-record-history-rewrite", "work-package-review-start", "close-work-package"}:
             command.add_argument("--receipt", type=Path, required=True)
         if name in {"mark-legacy-work-package", "retire-empty-module"}:
             command.add_argument("--successor", required=True)
@@ -3273,6 +3641,17 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "phase-record-commit-review":
             emit(
                 record_phase_commit_review(
+                    client,
+                    route,
+                    args.wp_id,
+                    args.phase,
+                    load_json(args.receipt),
+                    apply=args.apply,
+                )
+            )
+        elif args.command == "phase-record-history-rewrite":
+            emit(
+                record_phase_history_rewrite(
                     client,
                     route,
                     args.wp_id,

@@ -222,6 +222,25 @@ uncontained commits, incomplete OCR terminal/coverage evidence, a reused session
 incomplete synthesis, and undispositioned findings. A finding-remediation commit gets its own OCR
 receipt. Phase completion must preserve commit and session markers.
 
+For an accepted feature followed by accepted `fixup!` remediation commits,
+autosquash the group before beginning another feature. Copy
+`assets/history-rewrite.template.json` and record the original-to-final mapping:
+
+```bash
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-history-rewrite \
+  --repo "$PWD" --wp-id WP-01A --phase 1 --receipt /tmp/history-rewrite.json
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-history-rewrite \
+  --repo "$PWD" --wp-id WP-01A --phase 1 --receipt /tmp/history-rewrite.json --apply
+```
+
+The command independently reads Git objects to prove the original chain,
+fixup subjects, final parent/subject, immediate final HEAD, and tree equality.
+It also requires every original commit review marker on the selected Phase.
+Every MR commit mapping embeds either its complete `commit_review_receipt` or,
+for a rewritten feature, the same complete `history_rewrite_receipt`. The CLI
+revalidates the receipt and recomputes its digest and Git invariants; marker text
+alone is rejected. Original OCR receipts remain immutable.
+
 After all Phases are Done, create one real MR per declared repository when authorized. Use `glab mr
 create` for the operator action and re-read immutable MR state and revisions with:
 

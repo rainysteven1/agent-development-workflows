@@ -108,9 +108,11 @@ For each increment, finish this loop before starting the next:
    broad staging command when unrelated changes may be present.
 6. Inspect status and the complete staged diff. Confirm that it is atomic,
    contains no user baseline or secret, and matches the increment's evidence.
-7. Invoke `$commit-generate` against the staged diff, then commit with that
-   reviewed message unless the user opted out of commits or the environment is
-   not a Git repository.
+7. For a planned feature commit, invoke `$commit-generate` against the staged
+   diff, then commit with that reviewed message unless the user opted out of
+   commits or the environment is not a Git repository. For review remediation,
+   use `$git-workflow-and-versioning`'s `git commit --fixup=<feature-commit>`
+   contract; do not invent another independent message.
 8. Verify the commit identity and that no intended staged content was left
    behind. Record the command evidence tied to that commit. Treat any prior
    task structural index as stale; rely on a repository invalidation hook when
@@ -130,6 +132,12 @@ For each increment, finish this loop before starting the next:
     repeats this entire per-commit loop with its own fresh reviewer. Start the
     next planned increment only after the current implementation/remediation
     chain has no unresolved findings and its final review is accepted.
+11. If this is a feature/remediation group, converge it before the next planned
+    feature. Require private-history authority, run autosquash from the feature
+    parent, prove the final tree equals the last reviewed tree, and preserve the
+    original receipts. For a Plane-managed task, record the original-to-final
+    mapping with `phase-record-history-rewrite` before continuing. A tree change
+    makes the squashed result a new commit requiring verification and OCR.
 
 When a check fails, stop this increment. Record the earliest actionable error,
 the demonstrated cause or labeled hypothesis, cleanup result, and next changed
@@ -161,6 +169,9 @@ same turn under `$open-code-review`'s retry rules.
   manifest, fresh-reviewer batches, same-session synthesis, and finding
   disposition. Do not replace this ledger with a branch-, MR-, Phase-, or
   Work-Package-wide adversarial review.
+- Confirm no `fixup!` remediation commit remains in the final range. Each final
+  feature commit must have either its own review marker or a validated
+  history-only provenance mapping to the original reviewed feature/fixup chain.
 - Treat final branch regression and cross-commit or cross-repository real usage
   as cumulative verification, not another adversarial review round. If that
   verification requires a code or documentation commit, send the new commit

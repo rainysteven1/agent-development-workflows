@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "template": true,
+  "wp_id": "WP-XXA",
+  "phase": 0,
+  "operation": "feature-autosquash",
+  "result": "history-only",
+  "repository": "CHANGE-ME-GROUP/REPOSITORY",
+  "repository_path": "/CHANGE-ME-ABSOLUTE-CHECKOUT-PATH",
+  "original_parent_revision": "CHANGE-ME-FULL-PARENT-SHA",
+  "reviewed_head_revision": "CHANGE-ME-FINAL-REVIEWED-FIXUP-SHA",
+  "original_commits": [
+    {
+      "commit_revision": "CHANGE-ME-FEATURE-SHA",
+      "parent_revision": "CHANGE-ME-FULL-PARENT-SHA",
+      "role": "feature",
+      "review_receipt": "COPY-COMPLETE-COMMIT-REVIEW-RECEIPT-HERE"
+    },
+    {
+      "commit_revision": "CHANGE-ME-FIXUP-SHA",
+      "parent_revision": "CHANGE-ME-FEATURE-SHA",
+      "role": "fixup",
+      "review_receipt": "COPY-COMPLETE-COMMIT-REVIEW-RECEIPT-HERE"
+    }
+  ],
+  "final_parent_revision": "CHANGE-ME-FULL-PARENT-SHA",
+  "final_commit_revision": "CHANGE-ME-SQUASHED-FEATURE-SHA",
+  "reviewed_tree_revision": "CHANGE-ME-REVIEWED-TREE-SHA",
+  "final_tree_revision": "CHANGE-ME-SQUASHED-TREE-SHA",
+  "verification_commands": [
+    "git rev-parse CHANGE-ME-FINAL-REVIEWED-FIXUP-SHA^{tree}",
+    "git rev-parse CHANGE-ME-SQUASHED-FEATURE-SHA^{tree}"
+  ],
+  "operator": "CHANGE-ME-OPERATOR",
+  "recorded_at": "YYYY-MM-DDTHH:MM:SS+00:00",
+  "summary": "CHANGE-ME evidence-based conclusion that autosquash changed history only."
+}
