@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Plan"
+  short_description: "Create delivery briefs that hand off to Plane"
+  default_prompt: "Use $create-plan to turn this approved direction into an evidence-backed delivery brief."

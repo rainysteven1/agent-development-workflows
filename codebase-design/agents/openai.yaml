@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase Design"
+  short_description: "Design module interfaces and testing seams"
+  default_prompt: "Use $codebase-design to evaluate the interface, ownership boundary, and testing seam for this change."

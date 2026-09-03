@@ -48,6 +48,21 @@ state and task-list HTML as authority; chat, commits, and local notes are not pr
 
 ## Build A Work Package
 
+When the input is an approved `$create-plan` delivery brief, preserve its full
+design on a project Page when Pages are requested or already established. Write
+and verify that Page before creating the hierarchy. Keep detailed rationale on
+the Page; summarize only the delivery boundary in the Requirement and Work
+Package. Preserve every stable `AC-*` identifier: include the complete set in
+`work_package.acceptance`, prefix each Phase acceptance with the identifiers it
+covers, and ensure every required identifier belongs to at least one Phase.
+Plane becomes the execution authority only after the Page and hierarchy are
+read back and verified.
+
+If implementation later changes approved scope, public interfaces, data
+ownership, trust boundaries, recovery behavior, or an `AC-*` criterion, stop
+the dependent Phase and reconcile the Page plus affected hierarchy before
+continuing. A chat message or local ledger does not silently replace Plane.
+
 Copy `assets/work-package.template.json` to a task-owned temporary path. Replace every example and
 every `CHANGE-ME`/`WP-XXA`/`YYYY-MM-DD` placeholder, remove its `"template": true` safety marker,
 then validate and render it:
@@ -103,8 +118,9 @@ that envelope. A single-WP plan may omit these fields and inherit its Work Packa
 Preserve the repository's `external_source`. Use the WP ID itself as the label on the WP and all
 Phases. Declare every affected forge repository in `work_package.repositories` as a unique canonical
 `group/repository` slug; the rendered WP description makes this the authoritative MR set expected at
-review. Give every Phase 2-5 tasks, one observable acceptance criterion, realistic sequential dates,
-and explicit boundaries when later work could be confused with current scope.
+review. Give every Phase 2-5 tasks, one observable acceptance criterion with its `AC-*` mapping,
+realistic sequential dates, and explicit boundaries when later work could be confused with current
+scope.
 
 Apply the capability pyramid: smallest real happy path, durable state/basic observation, first real
 integration, then failure/security/recovery/scale hardening. Use 1-9 Phases; do not force a fixed

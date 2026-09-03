@@ -7,6 +7,9 @@
 ```text
 需要自主推进       long-horizon
 需要 Plane 状态    plane-workflow
+明确要求压力测试   grill-me（仅显式调用）
+需要交付设计简报   create-plan
+模块接口或 seam    codebase-design
 实现或修改         dev-loop + lean-delivery
 陌生仓库           guide + existing-project
 范围或调用链不清楚 repo-evidence
@@ -24,6 +27,9 @@ Push/MR/合并       finishing-a-development-branch
 | --- | --- |
 | 读取仓库规则和维护入口 | `guide` |
 | 固定目标、指标和取舍 | `north-star` |
+| 显式要求挑战重大决策 | `grill-me` |
+| 生成有证据的交付设计简报 | `create-plan` |
+| 设计模块接口、所有权和测试 seam | `codebase-design` |
 | 新建项目或子系统 | `new-project` |
 | 恢复陌生仓库地图 | `existing-project` |
 | 查代码、调用者、依赖和影响面 | `repo-evidence` |

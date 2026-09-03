@@ -32,7 +32,7 @@ Add the requirement, WP, and Phase work items to the Module. Parent relationship
 <p>概括 Phase 的推进顺序和交付切片，不复制每条 Phase checklist。</p>
 
 <h3>总体验收</h3>
-<p>写一个从用户或真实调用方角度可观察、可判定的完成条件。</p>
+<p>保留已批准 delivery brief 的完整 AC-* 集合，并概括从用户或真实调用方角度可观察、可判定的完成条件。</p>
 ```
 
 One WP owns one coherent delivery capability and may span multiple repositories, with one MR per
@@ -62,7 +62,7 @@ independently acceptable or independently releasable work into separate WPs.
 </ul>
 
 <h3>验收标准</h3>
-<p>描述必须通过的行为、约束、环境或 usage pass。</p>
+<p>以 [AC-1] 等稳定编号开头，描述必须通过的行为、约束、环境或 usage pass。</p>
 
 <h3>证据</h3>
 <p>待本 Phase 完成后回填真实测试与运行证据。</p>
@@ -100,6 +100,10 @@ Keep the original goal and acceptance criterion. Mark every proven task with bot
 ```
 
 ## Evidence Rules
+
+Every required `AC-*` identifier from the approved delivery brief must appear
+in the Work Package acceptance summary and in at least one direct Phase
+acceptance criterion. Completion evidence names the identifiers it proves.
 
 Good evidence is exact and attributable:
 

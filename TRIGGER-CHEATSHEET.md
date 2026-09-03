@@ -8,6 +8,9 @@ suite. Load only the Skills needed for the current task.
 ```text
 Need autonomy?       long-horizon
 Need Plane state?    plane-workflow
+Need design pressure? grill-me (explicit only)
+Need a delivery brief? create-plan
+Need a module seam?  codebase-design
 Implement/change?    dev-loop + lean-delivery
 Unknown repository?  guide + existing-project
 Unknown scope/flow?  repo-evidence
@@ -26,6 +29,9 @@ Push/MR/merge?       finishing-a-development-branch
 | --- | --- |
 | Read repository rules and maintained entrypoints | `guide` |
 | Define measurable priorities and tradeoffs | `north-star` |
+| Stress-test consequential decisions on explicit request | `grill-me` |
+| Create an evidence-backed delivery brief | `create-plan` |
+| Design module interfaces, ownership, and testing seams | `codebase-design` |
 | Start a greenfield repository or subsystem | `new-project` |
 | Recover an unfamiliar repository map | `existing-project` |
 | Find code, callers, dependencies, or impact | `repo-evidence` |

@@ -26,10 +26,11 @@ for its tests, review, and future changes.
 | --- | --- |
 | Direction | `guide`, `north-star`, `new-project`, `existing-project` |
 | Evidence | `repo-evidence`, `memory-governance` |
+| Design intake | `grill-me`, `create-plan`, `codebase-design` |
 | Delivery control | `dev-loop`, `long-horizon`, `lean-delivery` |
 | Git mechanics | `git-workflow-and-versioning`, `using-git-worktrees`, `commit-generate` |
 | Review and integration | `open-code-review`, `finishing-a-development-branch` |
-| Planning and closure | `plane-workflow` |
+| Planning and closure | `create-plan`, `plane-workflow` |
 | Engineering quality | `rust-testing` |
 | Local diagnostics | `codex-session-writer-recovery`, `witr-diagnose` |
 
@@ -48,7 +49,9 @@ For an autonomous Plane-managed implementation, start with:
 
 ```text
 long-horizon
-  -> plane-workflow
+  -> grill-me when explicitly requested
+  -> create-plan for material design
+  -> plane-workflow when Plane is the authority
   -> dev-loop + lean-delivery
   -> repo-evidence when scope or relationships are uncertain
   -> commit-generate
@@ -58,6 +61,11 @@ long-horizon
 
 `dev-loop` is the controlling implementation workflow. The other Skills own
 specialized decisions; they do not create parallel delivery loops.
+
+An approved `$create-plan` brief may be published through `$plane-workflow`.
+After Page and hierarchy read-back verification, Plane is the execution
+authority; later material design drift must be reconciled there before work
+continues.
 
 ## Repository Contract
 
