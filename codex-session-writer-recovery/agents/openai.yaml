@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Session Writer Recovery"
+  short_description: "Safely recover Codex sessions blocked by an active writer"
+  default_prompt: "Use $codex-session-writer-recovery to diagnose and safely release the writer blocking this Codex session."

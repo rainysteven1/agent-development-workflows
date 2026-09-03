@@ -1,0 +1,4 @@
+interface:
+  display_name: "Witr Diagnostics"
+  short_description: "Trace occupied ports and process ancestry"
+  default_prompt: "Use $witr-diagnose to identify what owns port 8080 and why it is running."
