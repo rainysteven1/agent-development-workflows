@@ -66,10 +66,57 @@ embedding model. Remote embeddings require explicit user authorization because
 repository content leaves the machine. Index creation, rebuild, and deletion
 are explicit mutations; the MCP search tool must not perform them implicitly.
 
-Run the read-only capability inventory when tool state is unknown:
+## Reuse indexes across worktrees
+
+Treat a bare repository as Git object/ref authority only. It has no source tree
+and must never be used as a Graft or Zvec-Grep indexing root. A managed
+worktree topology has three roles:
+
+```text
+<repository>.git/       bare common Git directory
+<repository>/           clean canonical target worktree and full index baseline
+<repository>-<wp>/      writable task worktree and task-local delta evidence
+```
+
+Resolve the canonical worktree from a maintained project map or repository
+configuration. Do not infer it merely from a directory name. Verify that it and
+the task worktree share the same resolved Git common directory, and record both
+full revisions and dirty states before reuse.
+
+The first explicitly authorized bootstrap establishes the managed baseline and
+records its model/configuration. Refresh that existing canonical baseline only
+after verified integration, keyed by the integrated revision; skip a retry when
+that revision already has a successful convergence record. Changing the model,
+rebuilding, dropping, or creating a new persistent index still requires
+explicit authority.
+
+Graft caches use repository-relative source paths and may be inherited only as
+a private task snapshot. Copy or reflink a clean, ready canonical snapshot into
+an absent task-local cache; never symlink or share one writable cache between
+worktrees. Immediately run the installed version's blocking refresh/check in
+the task worktree. If the snapshot is incompatible, discard only that proven
+task-owned copy and build task-local structural state instead. Never claim a
+copy operation itself as freshness evidence.
+
+Zvec-Grep stores root-bound workspace metadata and absolute source paths. Do not
+copy `.zvec-grep` between worktrees. Query the canonical index for stable
+repository-wide semantic discovery, then verify every candidate against the
+task worktree with source/exact search and, when needed, task-local Graft. Build
+a scoped task-local Zvec-Grep index only when branch-only content genuinely
+needs semantic discovery and the current task authorizes that mutation.
+
+After integration, update the canonical target worktree to the verified merged
+revision and refresh its existing Graft and Zvec-Grep baselines once. Never
+copy a task Zvec-Grep index back. Cleanup may remove only the recorded
+task-owned snapshot after proving no other worktree uses it.
+
+Run the read-only capability inventory when tool state is unknown. Pass the
+recorded canonical worktree in resume/delta mode:
 
 ```bash
 python ~/.codex/skills/repo-evidence/scripts/capabilities.py --repo "$PWD"
+python ~/.codex/skills/repo-evidence/scripts/capabilities.py \
+  --repo "$PWD" --baseline-repo /absolute/canonical/worktree
 ```
 
 See [references/tools.md](references/tools.md) for provider-specific commands
@@ -77,6 +124,8 @@ and interpretation.
 
 ## Return an evidence packet
 
-Report the question, immutable revision when applicable, routes used, candidate
-paths, verified source/test paths, checks actually run, index state, conflicts,
-and remaining blind spots. Never upgrade an unexecuted check into proof.
+Report the question, immutable revision when applicable, worktree role,
+canonical baseline path/revision, common-directory match, routes used, candidate
+paths, verified source/test paths, checks actually run, index origin/freshness,
+conflicts, and remaining blind spots. Never upgrade an unexecuted check or cache
+copy into proof.

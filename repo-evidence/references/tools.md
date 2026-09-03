@@ -33,6 +33,13 @@ Record model, dimensions, coverage, pending/failed items, storage path, build
 time, and disk size. Never add `--allow-remote`, an endpoint, or an API key for
 private code without explicit user authorization.
 
+An existing canonical index is queried from its canonical root even while the
+task checkout is elsewhere. Treat returned paths as candidates in that baseline
+revision, translate them to repository-relative paths, and read the
+corresponding task-worktree files before drawing a conclusion. Because the
+workspace manifest is root-bound, never rsync or reflink `.zvec-grep` into a
+different worktree.
+
 ## Graft
 
 Graft's normal build creates a deterministic tree-sitter graph. Optional deep
@@ -51,6 +58,21 @@ graft blast "$repo" --base origin/main --format json
 state automatically; that is not immutable evidence. Structural readiness can
 be valid while optional context enrichment is missing or pending. Preserve that
 distinction in reports.
+
+For a managed task worktree, inherit only a clean canonical `graft/` plus its
+compatible `.graft/` configuration as a new task-owned snapshot. Prefer a
+filesystem reflink when available, otherwise a non-linking copy such as rsync
+without `--delete`. Refuse a non-empty destination, shared symlink, dirty
+baseline, different Git common directory, or incompatible configuration. When
+the current task or recorded managed-index policy authorizes maintaining this
+existing snapshot, run `graft build "$task_repo"` followed by
+`graft check "$task_repo" --json`; both commands must succeed. Creating
+structural state without a reusable snapshot requires separate explicit index
+creation authority. The blocking check, not the transfer, establishes task
+freshness.
+
+After a verified merge, refresh each existing canonical baseline once from the
+clean merged target. Do not feed a task cache back into the canonical worktree.
 
 ## Memory boundary
 

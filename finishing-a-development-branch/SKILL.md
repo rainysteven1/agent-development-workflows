@@ -22,6 +22,8 @@ Before offering or executing an integration action, require:
 - independent review conclusion and every finding disposition when review
   applies
 - any required external gate, receipt, approval, or deployment prerequisite
+- canonical worktree and managed index baseline revision when repository
+  evidence was inherited by the task worktree
 
 If a required item is absent or stale, return to `$dev-loop`. Do not interpret
 "implementation looks finished" as evidence.
@@ -95,6 +97,13 @@ invalidate the older CI, review, and receipt evidence.
 After merge, verify the forge reports the expected merged state and that the
 target contains the intended task revision or merge result. Run post-merge
 checks only when the repository contract or task requires them.
+
+When the finish packet names a managed evidence baseline, update the clean
+canonical target worktree to the verified integrated revision and refresh its
+existing Graft and Zvec-Grep indexes once. Record the blocking freshness checks.
+Do not copy a task-local Zvec-Grep index or share a writable Graft cache back
+into the canonical worktree. An index failure blocks index-dependent completion
+claims, not proof that the Git integration itself occurred.
 
 ## 6. Merge locally
 

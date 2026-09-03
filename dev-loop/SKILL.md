@@ -22,6 +22,9 @@ their specialized mechanics.
 - `$repo-evidence`: route exact, semantic, and structural repository discovery
   and return revision/freshness-bound evidence. It does not choose implementation
   scope by itself.
+- `$existing-project`: perform first-repository bootstrap or reuse a verified
+  project map in resume/delta mode. A new worktree does not trigger full
+  repository recovery.
 - `$finishing-a-development-branch`: verify the finished branch and perform the
   user-authorized integration handoff.
 
@@ -57,6 +60,13 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
 - Inventory ignored inputs and environment prerequisites before running setup,
   tests, builds, or external mutations from a new worktree. Never copy secrets
   into it.
+- For an existing repository with a managed canonical worktree, invoke
+  `$existing-project` in resume/delta mode and `$repo-evidence` with the recorded
+  canonical baseline. Verify the shared Git common directory and map revision.
+  Inherit only a private Graft snapshot and refresh it in the task worktree;
+  query canonical Zvec-Grep for stable semantic candidates and never copy its
+  root-bound index. Full recovery is reserved for the escalation conditions in
+  `$existing-project`.
 - If a changed artifact is not in a Git repository, state that branch and
   commit checkpoints are unavailable and preserve an explicit before/after
   comparison instead.
@@ -103,8 +113,11 @@ For each increment, finish this loop before starting the next:
    not a Git repository.
 8. Verify the commit identity and that no intended staged content was left
    behind. Record the command evidence tied to that commit. Treat any prior
-   structural index as stale; rely on a repository invalidation hook when one
-   is maintained, otherwise record the invalidation explicitly.
+   task structural index as stale; rely on a repository invalidation hook when
+   one is maintained, otherwise record the invalidation explicitly. Refresh
+   task-local Graft before the next graph-dependent decision and require its
+   blocking build/check to succeed; do not rebuild or copy the canonical
+   Zvec-Grep baseline after every task commit.
 9. Invoke `$open-code-review`'s formal `ocr review --commit` verdict for exactly
    the immutable parent-to-commit range. Require native complete terminal state,
    full preview-file coverage, no failed/budget-skipped item, and dispositioned
@@ -157,6 +170,10 @@ same turn under `$open-code-review`'s retry rules.
 
 - Use `$finishing-a-development-branch` after implementation, findings, and
   required checks are green.
+- Include the canonical worktree and index-baseline revision in the finish
+  packet when this task used managed repository evidence. After verified
+  integration, refresh the existing canonical Graft/Zvec-Grep baselines once;
+  never backfill a task-local Zvec-Grep index.
 - Before push or merge, confirm the intended target, complete commit range,
   current head SHA, clean task range, and absence of user-baseline changes.
 - Push, open or update an MR, merge, publish, deploy, or clean up remote state

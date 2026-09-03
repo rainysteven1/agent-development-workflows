@@ -76,6 +76,12 @@ Phase is an acceptance and dependency slice, not a commit boundary; several Phas
 commit, and one Phase may require several commits. Never create or request a commit merely because a
 Phase starts or ends.
 
+One Work Package owns one worktree set: one isolated task worktree for each
+affected repository, all labelled with the same WP identity. Do not interpret a
+cross-repository WP as one filesystem worktree. Reuse each repository's
+canonical project map and evidence baseline through `$existing-project` and
+`$repo-evidence`; creating a WP worktree does not trigger full onboarding.
+
 Add the Requirement, WP, and every Phase to the Module. Preserve parent relationships as the
 canonical hierarchy. Use these external IDs:
 
@@ -162,8 +168,11 @@ conflicts; it never deletes evidence and re-reads every PATCH.
    authority.
 3. When the Phase performs cross-module refactoring, deletion, or explicitly relies on Graft or
    another structural index, invoke `$dev-loop`'s structural-index contract before the first
-   graph-based scope decision. Initialize at the whole task worktree root only when no valid index
-   exists; otherwise refresh/check it at the exact Phase-start revision. Record tool, revision,
+   graph-based scope decision. Resume from the repository's recorded canonical baseline when valid;
+   seed or refresh task-local Graft when that structural baseline exists. Only when no reusable
+   Graft baseline exists may explicit index-creation authority initialize structural state at the
+   whole task worktree root. This fallback never creates or copies a Zvec-Grep index. Otherwise
+   refresh/check at the exact Phase-start revision. Record tool, revision,
    root, language/file coverage, freshness result, and compiler/raw-search/external-consumer blind
    spots in the local ledger. Refresh again before a later checklist item relies on graph evidence
    made stale by earlier Phase commits. A post-commit/merge/checkout hook may record only a

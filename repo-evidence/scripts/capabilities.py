@@ -50,7 +50,7 @@ def parse_graft(repo: Path) -> dict[str, Any]:
     state = version("graft", repo)
     if not state["installed"]:
         return state
-    result = run([state["path"], "check", "--json"], repo, timeout=60)
+    result = run([state["path"], "check", str(repo), "--json"], repo, timeout=60)
     raw = result["stdout"]
     start = raw.find("{")
     try:
@@ -73,6 +73,52 @@ def parse_graft(repo: Path) -> dict[str, Any]:
         }
     )
     return state
+
+
+def git_path(repo: Path, argument: str) -> Path:
+    result = run(["git", "rev-parse", argument], repo)
+    if result["exitCode"] != 0 or not result["stdout"].strip():
+        raise SystemExit(f"cannot resolve {argument} for {repo}")
+    value = Path(result["stdout"].strip())
+    return (repo / value).resolve() if not value.is_absolute() else value.resolve()
+
+
+def repository_state(repo: Path) -> dict[str, Any]:
+    head_result = run(["git", "rev-parse", "HEAD"], repo)
+    head = head_result["stdout"].strip().lower()
+    if head_result["exitCode"] != 0 or not re.fullmatch(
+        r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head
+    ):
+        raise SystemExit(f"cannot resolve a full HEAD revision for {repo}")
+    status = run(["git", "status", "--porcelain=v1"], repo)["stdout"]
+    return {
+        "repository": str(repo),
+        "head": head,
+        "dirty": bool(status.strip()),
+        "gitCommonDir": str(git_path(repo, "--git-common-dir")),
+        "tools": {
+            "fastctx": version("fastctx", repo),
+            "graft": parse_graft(repo),
+            "zg": parse_zg(repo),
+        },
+    }
+
+
+def capability_payload(
+    repo: Path, baseline_repo: Path | None = None
+) -> dict[str, Any]:
+    current = repository_state(repo)
+    payload = {
+        "format": "repo-evidence-capabilities/v2",
+        **current,
+    }
+    if baseline_repo is not None:
+        baseline = repository_state(baseline_repo)
+        payload["baseline"] = baseline
+        payload["sameGitCommonDir"] = (
+            current["gitCommonDir"] == baseline["gitCommonDir"]
+        )
+    return payload
 
 
 def match_int(pattern: str, text: str) -> int | None:
@@ -108,26 +154,27 @@ def parse_zg(repo: Path) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--baseline-repo",
+        type=Path,
+        help="canonical worktree whose reusable index baseline should be inspected",
+    )
     args = parser.parse_args()
     requested = args.repo.resolve()
     root_result = run(["git", "rev-parse", "--show-toplevel"], requested)
     if root_result["exitCode"] != 0:
         raise SystemExit("--repo must be inside a Git worktree")
     repo = Path(root_result["stdout"].strip()).resolve()
-    head = run(["git", "rev-parse", "HEAD"], repo)["stdout"].strip()
-    status = run(["git", "status", "--porcelain=v1"], repo)["stdout"]
-    payload = {
-        "format": "repo-evidence-capabilities/v1",
-        "repository": str(repo),
-        "head": head,
-        "dirty": bool(status.strip()),
-        "tools": {
-            "fastctx": version("fastctx", repo),
-            "graft": parse_graft(repo),
-            "zg": parse_zg(repo),
-        },
-    }
-    print(json.dumps(payload, indent=2, sort_keys=True))
+    baseline_repo = None
+    if args.baseline_repo is not None:
+        requested_baseline = args.baseline_repo.resolve()
+        baseline_root = run(
+            ["git", "rev-parse", "--show-toplevel"], requested_baseline
+        )
+        if baseline_root["exitCode"] != 0:
+            raise SystemExit("--baseline-repo must be inside a Git worktree")
+        baseline_repo = Path(baseline_root["stdout"].strip()).resolve()
+    print(json.dumps(capability_payload(repo, baseline_repo), indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
