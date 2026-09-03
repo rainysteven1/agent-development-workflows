@@ -88,6 +88,10 @@ Escalate resume/delta to full bootstrap only when one of these is observed:
 4. Ask `$repo-evidence` for current and baseline index state. Reuse the canonical
    semantic baseline and refresh only task-local structural evidence as its
    contract permits.
+   - When the Git common directory has managed index configuration, read
+     `index_lifecycle.py status`. A ready post-checkout result replaces manual
+     snapshot copying; an absent/failed task state must be repaired with the
+     maintained `prepare-worktree --apply` command before graph-dependent work.
 5. Return the inherited map plus a delta appendix: task HEAD, changed coverage,
    confirmed commands, conflicts, stale areas, and the condition that would
    require full bootstrap.

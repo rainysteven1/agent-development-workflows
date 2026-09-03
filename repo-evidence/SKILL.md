@@ -98,6 +98,34 @@ the task worktree. If the snapshot is incompatible, discard only that proven
 task-owned copy and build task-local structural state instead. Never claim a
 copy operation itself as freshness evidence.
 
+For repositories that opt into automatic lifecycle management, use the bundled
+script instead of reconstructing hook and state logic by hand:
+
+```bash
+# First inspect, then explicitly authorize initial local index creation.
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py configure \
+  --repo /absolute/canonical/worktree --target-branch RESOLVED_TARGET_BRANCH --bootstrap-indexes
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py configure \
+  --repo /absolute/canonical/worktree --target-branch RESOLVED_TARGET_BRANCH --bootstrap-indexes --apply
+
+# Read back revision-keyed canonical/task state.
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py status --repo "$PWD"
+```
+
+Configuration is per Git common directory. It installs owned `post-checkout`,
+`post-merge`, and `post-rewrite` hooks only when those paths are absent or
+already owned by this lifecycle; it refuses to replace another hook. A new
+linked worktree's post-checkout copies the canonical Graft snapshot with rsync,
+then runs blocking task-local build/check. Canonical merge/rewrite events run
+Graft and Zvec-Grep convergence once per new target revision. Hook failure is
+reported but cannot undo the Git operation, so the next agent must read
+`status` and repair an unready state before relying on indexes.
+
+This snapshot reuse is validated for the configured Graft version and is not an
+upstream worktree guarantee. The manager records and enforces tool versions;
+after a version change it refuses snapshot reuse until compatibility is
+explicitly revalidated. Never share one writable cache between worktrees.
+
 Zvec-Grep stores root-bound workspace metadata and absolute source paths. Do not
 copy `.zvec-grep` between worktrees. Query the canonical index for stable
 repository-wide semantic discovery, then verify every candidate against the

@@ -71,6 +71,35 @@ structural state without a reusable snapshot requires separate explicit index
 creation authority. The blocking check, not the transfer, establishes task
 freshness.
 
+The maintained automation is:
+
+```bash
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py status --repo "$PWD"
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py prepare-worktree \
+  --repo "$PWD" --apply
+python ~/.codex/skills/repo-evidence/scripts/index_lifecycle.py converge \
+  --repo /absolute/canonical/worktree --apply
+```
+
+`prepare-worktree` verifies the common Git directory, clean/revision-matched
+canonical state, configured Graft version, absent task Zvec-Grep directory, and
+then uses non-deleting `rsync -a --safe-links`. It follows the copy with
+`graft build --no-gitignore --no-ignore` and `graft check --json` and records
+only bounded command hashes/status, not command output or source content.
+It copies only when the canonical baseline revision is an ancestor of the task
+HEAD. For an older or unrelated task history it skips the snapshot and performs
+a task-local Graft build/check instead of importing newer source state.
+Before the first cache mutation it records `preparing` state and writes a
+task-bound ownership marker inside `graft/`. Retries accept an existing cache
+only when both records agree; an absent, replaced, symlinked, or conflicting
+cache remains untouched and fails closed.
+
+The Graft 0.16.0 Linux PoC copied a two-file canonical cache into a linked
+worktree, changed one file, and observed `parsed: 1 of 2 files (1 replayed from
+cache)`. The task graph refreshed from five to six nodes, contained no source
+worktree absolute paths, and left the canonical cache hash unchanged. Treat
+this as a version-bound local contract, not an upstream guarantee.
+
 After a verified merge, refresh each existing canonical baseline once from the
 clean merged target. Do not feed a task cache back into the canonical worktree.
 

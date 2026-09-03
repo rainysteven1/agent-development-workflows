@@ -112,6 +112,11 @@ Do not copy a task-local Zvec-Grep index or share a writable Graft cache back
 into the canonical worktree. An index failure blocks index-dependent completion
 claims, not proof that the Git integration itself occurred.
 
+Prefer the repository's managed lifecycle command for this step. The owned
+post-merge/post-rewrite hook should already have converged canonical state; read
+`index_lifecycle.py status`, run `converge --apply` only if the exact integrated
+SHA is not `ready`, and re-read. Do not report completion from hook output alone.
+
 ## 6. Merge locally
 
 Use this only when the user explicitly chooses local integration.

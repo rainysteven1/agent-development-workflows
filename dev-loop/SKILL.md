@@ -67,6 +67,11 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   query canonical Zvec-Grep for stable semantic candidates and never copy its
   root-bound index. Full recovery is reserved for the escalation conditions in
   `$existing-project`.
+- When managed index lifecycle configuration exists, read its revision-keyed
+  status after worktree creation. The owned post-checkout hook normally prepares
+  the private Graft snapshot; run `index_lifecycle.py prepare-worktree --apply`
+  whenever task status is absent or anything other than `ready`, then re-read
+  it. Never treat hook exit alone as readiness evidence.
 - If a changed artifact is not in a Git repository, state that branch and
   commit checkpoints are unavailable and preserve an explicit before/after
   comparison instead.
@@ -185,6 +190,10 @@ same turn under `$open-code-review`'s retry rules.
   packet when this task used managed repository evidence. After verified
   integration, refresh the existing canonical Graft/Zvec-Grep baselines once;
   never backfill a task-local Zvec-Grep index.
+- For a managed repository, verify the post-merge/post-rewrite hook recorded the
+  integrated target SHA as canonical `ready`. If it did not, run the maintained
+  `index_lifecycle.py converge --apply` command and re-read status. The same SHA
+  must return `already-ready` without rerunning Graft or Zvec-Grep.
 - Before push or merge, confirm the intended target, complete commit range,
   current head SHA, clean task range, and absence of user-baseline changes.
 - Push, open or update an MR, merge, publish, deploy, or clean up remote state

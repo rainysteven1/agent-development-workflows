@@ -81,6 +81,11 @@ affected repository, all labelled with the same WP identity. Do not interpret a
 cross-repository WP as one filesystem worktree. Reuse each repository's
 canonical project map and evidence baseline through `$existing-project` and
 `$repo-evidence`; creating a WP worktree does not trigger full onboarding.
+When a repository has managed index lifecycle configuration, `git worktree add`
+triggers its owned post-checkout preparation hook. Record and verify the
+revision-keyed task state for every member of the set before graph-dependent
+Phase work; repair a missing/failed state through `$repo-evidence`, not by
+copying caches ad hoc.
 
 Add the Requirement, WP, and every Phase to the Module. Preserve parent relationships as the
 canonical hierarchy. Use these external IDs:
