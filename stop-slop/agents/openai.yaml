@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stop Slop"
+  short_description: "Polish human-facing technical prose without drift"
+  default_prompt: "Use $stop-slop to remove AI-sounding filler from this technical document without changing its facts or constraints."

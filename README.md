@@ -32,6 +32,7 @@ for its tests, review, and future changes.
 | Review and integration | `open-code-review`, `finishing-a-development-branch` |
 | Planning and closure | `create-plan`, `plane-workflow` |
 | Engineering quality | `codebase-design`, `tdd`, `diagnosing-bugs`, `rust-testing` |
+| Writing quality | `stop-slop`, `writing-for-agents` |
 | Local diagnostics | `codex-session-writer-recovery`, `witr-diagnose` |
 
 ## Research and Communication
@@ -76,6 +77,8 @@ continues.
 - Keep one independently reviewable reason per commit.
 - Validate every changed Skill with the system `skill-creator` validator and
   execute its changed scripts or tests.
+- Use `writing-for-agents` for instruction routing and completion behavior;
+  apply `stop-slop` only to human-facing prose after semantics are fixed.
 - Run immutable per-commit review before integration.
 - Synchronize only repository-owned Skills to agent hosts. Never overwrite or
   delete unrelated third-party Skills in those hosts.

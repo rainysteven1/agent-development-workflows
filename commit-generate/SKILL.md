@@ -74,6 +74,20 @@ Prioritize observable or contract-relevant changes:
 Aggregate repetitive edits. Do not narrate whitespace, mechanical renames, or
 every touched file unless that is the actual purpose of the commit.
 
+### Remove commit-message slop
+
+Use concrete verbs and named effects. Generic subjects such as `update`,
+`improve`, or `enhance` are acceptable only when the object and observable
+change make the intent specific. Remove meta-openers such as `this change`, and
+drop unsupported polish words such as `properly`, `robust`, `comprehensive`, or
+`seamless`.
+
+The header states the primary intent. Body bullets add distinct rationale,
+contract effects, failure behavior, or verification-relevant facts; they do not
+paraphrase the header. Technical terms, passive voice, punctuation, and list
+length follow clarity and repository convention rather than a generic prose
+ban.
+
 ### Detect breaking changes
 
 Mark a change as breaking only when the evidence shows an incompatible released
@@ -139,6 +153,8 @@ Before returning the message, verify that it:
 - describes the staged or supplied evidence rather than assumed intent
 - represents one reason to change
 - uses a repository-appropriate type and scope
+- uses concrete language without filler, vague quality claims, or body/header
+  repetition
 - calls out a real breaking change and migration when present
 - contains no unsupported issue, test, security, or compatibility claim
 

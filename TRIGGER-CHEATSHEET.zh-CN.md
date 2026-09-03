@@ -12,6 +12,8 @@
 模块接口或 seam    codebase-design
 复杂或根因不明故障 diagnosing-bugs
 需要 red-green     tdd
+人类阅读的正式文档 stop-slop
+代理指令与路由     writing-for-agents
 实现或修改         dev-loop + lean-delivery
 陌生仓库           guide + existing-project
 范围或调用链不清楚 repo-evidence
@@ -34,6 +36,8 @@ Push/MR/合并       finishing-a-development-branch
 | 设计模块接口、所有权和测试 seam | `codebase-design` |
 | 证明复杂、间歇或反复故障的根因 | `diagnosing-bugs` |
 | 在稳定 seam 上以 red-green 实现行为 | `tdd` |
+| 润色 README、指南、发布说明或设计叙述 | `stop-slop` |
+| 设计 AGENTS、Skill 或代理 runbook | `writing-for-agents` |
 | 新建项目或子系统 | `new-project` |
 | 恢复陌生仓库地图 | `existing-project` |
 | 查代码、调用者、依赖和影响面 | `repo-evidence` |

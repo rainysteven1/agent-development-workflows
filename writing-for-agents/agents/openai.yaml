@@ -1,0 +1,4 @@
+interface:
+  display_name: "Writing for Agents"
+  short_description: "Make agent instructions reliable and economical"
+  default_prompt: "Use $writing-for-agents to improve the routing, information hierarchy, and completion criteria in these agent instructions."

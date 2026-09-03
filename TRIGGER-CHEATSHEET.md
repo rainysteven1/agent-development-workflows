@@ -13,6 +13,8 @@ Need a delivery brief? create-plan
 Need a module seam?  codebase-design
 Hard/uncertain bug?  diagnosing-bugs
 Need red-green?      tdd
+Human-facing prose?  stop-slop
+Agent instructions?  writing-for-agents
 Implement/change?    dev-loop + lean-delivery
 Unknown repository?  guide + existing-project
 Unknown scope/flow?  repo-evidence
@@ -36,6 +38,8 @@ Push/MR/merge?       finishing-a-development-branch
 | Design module interfaces, ownership, and testing seams | `codebase-design` |
 | Prove the cause of a hard, intermittent, or recurring failure | `diagnosing-bugs` |
 | Implement observable behavior through a red-green loop | `tdd` |
+| Polish README, guides, releases, or design prose | `stop-slop` |
+| Design AGENTS, Skill, or agent-runbook instructions | `writing-for-agents` |
 | Start a greenfield repository or subsystem | `new-project` |
 | Recover an unfamiliar repository map | `existing-project` |
 | Find code, callers, dependencies, or impact | `repo-evidence` |

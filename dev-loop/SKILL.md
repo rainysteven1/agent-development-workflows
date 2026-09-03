@@ -30,6 +30,10 @@ their specialized mechanics.
   an established seam; it does not control the broader delivery sequence.
 - `$lean-delivery`: select the smallest acceptance-complete implementation after
   the required evidence, design, and feedback loop are established.
+- `$writing-for-agents`: design routing, hierarchy, and checkable completion for
+  AGENTS, Skills, and other agent-facing instructions.
+- `$stop-slop`: polish formal human-facing technical prose after its facts and
+  constraints are correct. It does not edit agent instructions or commits.
 - `$existing-project`: perform first-repository bootstrap or reuse a verified
   project map in resume/delta mode. A new worktree does not trigger full
   repository recovery.
@@ -139,6 +143,11 @@ replaces its Git, review, or completion gates.
 3. Exercise the changed path as a real caller or user when applicable.
 4. Review the increment for scope drift, hidden coupling, generated artifacts,
    security, accessibility, and regressions directly caused by the change.
+   For agent-facing instructions, invoke `$writing-for-agents`; for formal
+   human-facing prose, invoke `$stop-slop` after semantic correctness. In a
+   mixed-audience document, apply `$writing-for-agents` to agent instructions
+   and restrict `$stop-slop` to explicitly human-facing sections; keep the
+   executable agent instructions outside that style pass.
 5. Stage only the exact files or hunks belonging to this increment. Never use a
    broad staging command when unrelated changes may be present.
 6. Inspect status and the complete staged diff. Confirm that it is atomic,

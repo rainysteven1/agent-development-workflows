@@ -30,10 +30,12 @@
     {"name": "research-ideation", "category": "research"},
     {"name": "rust-testing", "category": "testing"},
     {"name": "slidecraft", "category": "research"},
+    {"name": "stop-slop", "category": "writing"},
     {"name": "talk-architect", "category": "research"},
     {"name": "tdd", "category": "testing"},
     {"name": "using-git-worktrees", "category": "git"},
     {"name": "weekly-report", "category": "reporting"},
-    {"name": "witr-diagnose", "category": "diagnostics"}
+    {"name": "witr-diagnose", "category": "diagnostics"},
+    {"name": "writing-for-agents", "category": "writing"}
   ]
 }
