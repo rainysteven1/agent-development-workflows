@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plane Workflow"
+  short_description: "Track commit reviews, GitLab MRs, and Plane delivery states"
+  default_prompt: "Use $plane-workflow to execute this Work Package, record each commit review on its Phase, move the WP to Review when its GitLab MRs exist, and mark it Done only after merge verification."

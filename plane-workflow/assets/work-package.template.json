@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "template": true,
+  "module": {
+    "id": "REQ-CHANGE-ME",
+    "title": "可交付能力边界",
+    "description": "把一项稳定需求边界组织为可独立关闭的 Work Package。"
+  },
+  "requirement": {
+    "id": "REQ-CHANGE-ME",
+    "title": "可交付能力边界",
+    "description": "说明用户、调用方和权威系统可观察的需求结果。",
+    "priority": "high",
+    "start_date": "YYYY-MM-DD",
+    "target_date": "YYYY-MM-DD"
+  },
+  "work_package": {
+    "id": "WP-XXA",
+    "title": "最小真实交付闭环",
+    "goal": "交付一条从真实入口到权威状态的最小可用路径。",
+    "repositories": [
+      "CHANGE-ME-GROUP/BACKEND-REPOSITORY",
+      "CHANGE-ME-GROUP/FRONTEND-REPOSITORY"
+    ],
+    "boundaries": [
+      "复用现有事实源和合同，不建立第二套状态模型。",
+      "本 Work Package 不提前实现后续安全、恢复或规模化能力。",
+      "本 Work Package 可跨多个 repository，每个受影响仓库对应一个 Merge Request；每个实际 material commit 独立审查并回填实际 Phase，Phase 不对应 commit；MR 创建后 WP 进入 Review，全部合并并通过合并后验证才进入 Done。"
+    ],
+    "scope": "先冻结合同，再实现 happy path 和持久观察，随后完成真实集成与最终证据。",
+    "acceptance": "真实调用方可以完成一次端到端使用，并从权威系统回读一致结果。",
+    "priority": "high",
+    "start_date": "YYYY-MM-DD",
+    "target_date": "YYYY-MM-DD",
+    "label_color": "#0F766E"
+  },
+  "phases": [
+    {
+      "number": 0,
+      "title": "边界与合同冻结",
+      "goal": "形成后续实现可直接验证的输入、输出和所有权边界。",
+      "tasks": [
+        "回读现有事实源、接口和相邻 Work Package。",
+        "冻结最小合同、明确边界和可观察验收场景。"
+      ],
+      "acceptance": "合同与边界不存在第二事实源，至少一个 happy path 可被直接验证。",
+      "start_date": "YYYY-MM-DD",
+      "target_date": "YYYY-MM-DD",
+      "priority": "high"
+    },
+    {
+      "number": 1,
+      "title": "最小可用实现",
+      "goal": "让最小真实 happy path 端到端可用并具备基本观察能力。",
+      "tasks": [
+        "实现当前 Phase 所需的最小领域和接口切片。",
+        "运行定向测试并完成一次真实 usage pass。"
+      ],
+      "acceptance": "真实入口成功完成一次调用，权威状态和基本日志可回读。",
+      "start_date": "YYYY-MM-DD",
+      "target_date": "YYYY-MM-DD",
+      "priority": "high"
+    },
+    {
+      "number": 2,
+      "title": "集成与交付证据",
+      "goal": "在真实依赖上证明集成路径并形成可复现的关闭证据。",
+      "tasks": [
+        "完成真实依赖或跨系统集成验证。",
+        "执行最终累计回归与真实 usage，确认每个 commit 的独立审查证据已记录到实际 Phase，并创建真实 Merge Request。"
+      ],
+      "acceptance": "最终 revision 的累计检查和真实 usage pass 有可复现证据，commit-review chain 已映射到 Phase，真实 MR 已创建并可进入 WP Review。",
+      "start_date": "YYYY-MM-DD",
+      "target_date": "YYYY-MM-DD",
+      "priority": "medium"
+    }
+  ]
+}

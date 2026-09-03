@@ -10,6 +10,11 @@ This directory contains Codex-adapted skills migrated from the `skills-main` Cla
 |---|---|
 | `guide` | Brief the repo's workflow, conventions, and likely next skill before work starts |
 | `dev-loop` | Drive implementation, verification, and completion reporting |
+| `repo-evidence` | Route exact, semantic, structural, and revision-bound repository evidence |
+| `git-workflow-and-versioning` | Maintain isolated, atomic, reviewable Git history |
+| `finishing-a-development-branch` | Verify and perform an authorized branch integration handoff |
+| `open-code-review` | Run immutable per-commit OCR review and preserve receipts |
+| `plane-workflow` | Plan and execute Plane work packages with review evidence |
 | `north-star` | Define measurable project objectives and tradeoff rules |
 | `long-horizon` | Run with higher autonomy and controlled escalation |
 | `new-project` | Scope and scaffold a greenfield project or subsystem |

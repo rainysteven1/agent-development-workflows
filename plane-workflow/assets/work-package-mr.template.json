@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "template": true,
+  "wp_id": "WP-XXA",
+  "merge_requests": [
+    {
+      "repository": "CHANGE-ME-GROUP/REPOSITORY",
+      "repository_path": "/CHANGE-ME-ABSOLUTE-SOURCE-CHECKOUT-PATH",
+      "url": "https://CHANGE-ME/GROUP/REPOSITORY/-/merge_requests/1",
+      "state": "opened",
+      "base_revision": "CHANGE-ME-FULL-GIT-SHA",
+      "head_revision": "CHANGE-ME-FULL-GIT-SHA",
+      "verification_command": "python ~/.codex/skills/plane-workflow/scripts/gitlab_workflow.py inspect-mr --repo /CHANGE-ME-ABSOLUTE-SOURCE-CHECKOUT-PATH --iid 1",
+      "commits": [
+        {
+          "commit_revision": "CHANGE-ME-FULL-COMMIT-SHA",
+          "phase": 0
+        }
+      ]
+    }
+  ],
+  "result": "opened",
+  "summary": "CHANGE-ME evidence-based conclusion that every real MR is open and recorded."
+}

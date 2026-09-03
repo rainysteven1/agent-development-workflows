@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "template": true,
+  "wp_id": "WP-XXA",
+  "merge_requests": [
+    {
+      "repository": "CHANGE-ME-GROUP/REPOSITORY",
+      "url": "https://CHANGE-ME/GROUP/REPOSITORY/-/merge_requests/1",
+      "base_revision": "CHANGE-ME-FULL-GIT-SHA",
+      "head_revision": "CHANGE-ME-FULL-GIT-SHA",
+      "state": "merged",
+      "merge_method": "merge",
+      "target_repository_path": "/CHANGE-ME-ABSOLUTE-TARGET-CHECKOUT-PATH",
+      "merge_revision": "CHANGE-ME-FULL-MERGE-SHA",
+      "squash_revision": null,
+      "verification_command": "glab api CHANGE-ME"
+    }
+  ],
+  "final_verification": {
+    "commands": [
+      "CHANGE-ME post-merge regression command"
+    ],
+    "real_usage": "CHANGE-ME post-merge real usage result.",
+    "summary": "CHANGE-ME evidence-based post-merge verification conclusion."
+  },
+  "result": "merged",
+  "summary": "CHANGE-ME evidence-based conclusion that every recorded MR is merged."
+}

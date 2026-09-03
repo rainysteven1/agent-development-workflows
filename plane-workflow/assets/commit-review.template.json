@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "template": true,
+  "wp_id": "WP-XXA",
+  "phase": 0,
+  "review_scope": "atomic-commit",
+  "review_mode": "ocr",
+  "ocr_version": "v1.11.1",
+  "provider": "crs-custom",
+  "model": "gpt-5.6-luna",
+  "effort": "high",
+  "repository": "CHANGE-ME-GROUP/REPOSITORY",
+  "repository_path": "/CHANGE-ME-ABSOLUTE-CHECKOUT-PATH",
+  "parent_revision": "CHANGE-ME-FULL-PARENT-SHA",
+  "commit_revision": "CHANGE-ME-FULL-COMMIT-SHA",
+  "session_id": "CHANGE-ME-OCR-SESSION-ID",
+  "terminal_state": "complete",
+  "preview_files": ["CHANGE-ME-REVIEWED-PATH"],
+  "file_statuses": [{"path": "CHANGE-ME-REVIEWED-PATH", "status": "completed"}],
+  "rule_fingerprint": "CHANGE-ME-RULE-FINGERPRINT",
+  "batch_count": 1,
+  "synthesis": "accepted",
+  "summary": "CHANGE-ME evidence-based same-session synthesis conclusion.",
+  "commands": [
+    "ocr review --commit CHANGE-ME-FULL-COMMIT-SHA --format json --output /tmp/CHANGE-ME-review.json --provider crs-custom --model gpt-5.6-luna --effort high"
+  ],
+  "findings": []
+}

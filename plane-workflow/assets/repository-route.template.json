@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "workspace": "platform",
+  "project_id": "00000000-0000-4000-8000-000000000000",
+  "project_identifier": "DCP",
+  "project_name": "Application Delivery Control Plane",
+  "external_source": "application-delivery-control-plane-v1"
+}

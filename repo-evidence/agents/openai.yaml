@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repository Evidence"
+  short_description: "Route exact, semantic, structural, and proven repo evidence"
+  default_prompt: "Use $repo-evidence to find and verify the repository evidence for this question."

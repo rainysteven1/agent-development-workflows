@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open Code Review"
+  short_description: "Build OCR manifests for bounded adversarial review"
+  default_prompt: "Use $open-code-review after ordinary verification to review the immutable MR set in bounded batches with complete coverage."
