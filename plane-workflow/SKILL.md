@@ -145,6 +145,24 @@ python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py verify-hierarchy
   /tmp/work-package.json --repo "$PWD"
 ```
 
+When an approved design changes after a Phase has started, use the narrow design reconciler instead
+of `sync-work-package`. It updates only the existing WP and Phase descriptions; it never changes the
+Module, Requirement, hierarchy, dates, states, priorities, or labels. An active Phase may change only
+its `明确边界`; its goal, task list, acceptance criterion, and recorded review/history markers must
+remain unchanged. Unstarted Phases must have no progress or evidence, and terminal or review Phases
+cannot be changed. Dry-run first, then apply and re-read every changed item:
+
+```bash
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py \
+  reconcile-work-package-design /tmp/work-package.json --repo "$PWD"
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py \
+  reconcile-work-package-design /tmp/work-package.json --repo "$PWD" --apply
+```
+
+The command preflights the full mutation set, but Plane offers no multi-item transaction. If apply
+stops after an uncertain PATCH, do not roll back or retry the write blindly; run the same command
+without `--apply` to re-read the hierarchy, then apply only the remaining deterministic actions.
+
 Reconcile by `external_source + external_id`, then exact name plus parent. Stop on ambiguous matches.
 Create or update in dependency order: Module and label, Requirement, WP, Phases, Module membership.
 Do not delete an object except through the guarded never-started replacement flow below. Never

@@ -1862,6 +1862,214 @@ def work_package_and_phases(
     return work_package, phases, all_items
 
 
+DESIGN_PHASE_HEADINGS = {"目标", "具体任务", "验收标准", "证据", "明确边界"}
+DESIGN_WP_HEADINGS = {"目标", "参与仓库", "设计边界", "交付范围", "总体验收"}
+
+
+def _html_section_blocks(value: str) -> list[tuple[str, str]]:
+    canonical = re.sub(r"</?div(?: [^>]*)?>", "", _canonical_html(value))
+    first_heading = canonical.find("<h3>")
+    if first_heading < 0:
+        raise WorkflowError("design reconciliation requires semantic h3 sections")
+    prefix = canonical[:first_heading]
+    if re.sub(r"</?div(?: [^>]*)?>", "", prefix).strip():
+        raise WorkflowError("design reconciliation found content before the first semantic section")
+    canonical = canonical[first_heading:]
+    blocks = re.split(r"(?=<h3>)", canonical)
+    result: list[tuple[str, str]] = []
+    for block in blocks:
+        if not block:
+            continue
+        heading = re.match(r"<h3>([^<]+)</h3>", block)
+        if heading is None:
+            raise WorkflowError("design reconciliation requires semantic h3 sections")
+        result.append((html.unescape(heading.group(1)), block))
+    return result
+
+
+def _merge_design_sections(desired: str, current: str, design_headings: set[str]) -> str:
+    retained = "".join(
+        block for heading, block in _html_section_blocks(current) if heading not in design_headings
+    )
+    return _canonical_html(desired) + retained
+
+
+def _replace_phase_boundaries(current: str, desired: str) -> str:
+    desired_boundaries = [
+        block for heading, block in _html_section_blocks(desired) if heading == "明确边界"
+    ]
+    if len(desired_boundaries) > 1:
+        raise WorkflowError("design reconciliation found duplicate desired Phase boundaries")
+    blocks = [
+        (heading, block)
+        for heading, block in _html_section_blocks(current)
+        if heading != "明确边界"
+    ]
+    output: list[str] = []
+    inserted = False
+    for heading, block in blocks:
+        output.append(block)
+        if heading == "证据" and desired_boundaries:
+            output.extend(desired_boundaries)
+            inserted = True
+    if desired_boundaries and not inserted:
+        raise WorkflowError("active Phase lacks the evidence section required for boundary placement")
+    return "".join(output)
+
+
+def _workflow_markers(value: str) -> set[str]:
+    return set(
+        re.findall(
+            r"plane-workflow:(?:commit-review|reviewer-session|history-rewrite|wp-mr|wp-merge):v1:[^<\s]+",
+            value,
+        )
+    )
+
+
+def _item_snapshot(item: dict[str, Any]) -> dict[str, Any]:
+    snapshot = {
+        key: item.get(key)
+        for key in (
+            "name", "priority", "start_date", "target_date", "external_source", "external_id",
+        )
+    }
+    snapshot["state"] = object_id(item.get("state"))
+    snapshot["parent"] = object_id(item.get("parent"))
+    snapshot["labels"] = sorted(
+        filter(None, (object_id(value) for value in (item.get("labels") or [])))
+    )
+    return snapshot
+
+
+def _phase_contract_matches(current_html: str, desired_html: str) -> bool:
+    current, desired = phase_summary(current_html), phase_summary(desired_html)
+    return (
+        current["tasks"] == desired["tasks"]
+        and current["sections"].get("目标") == desired["sections"].get("目标")
+        and current["sections"].get("验收标准") == desired["sections"].get("验收标准")
+    )
+
+
+def reconcile_work_package_design(
+    client: PlaneClient,
+    route: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    apply: bool,
+) -> dict[str, Any]:
+    """Reconcile WP design text without changing hierarchy, state, or recorded evidence."""
+    errors = validate_plan(plan)
+    if errors:
+        raise WorkflowError("invalid plan: " + "; ".join(errors))
+    project = client.project()
+    assert_project(route, project)
+    assert_active_project(project)
+    rendered = render_objects(plan, route["external_source"])
+    work_package, phases, _ = work_package_and_phases(
+        client, route, plan["work_package"]["id"]
+    )
+    work_package = client.retrieve_work_item(work_package["id"])
+    desired_phases = {item["external_id"]: item for item in rendered["phases"]}
+    existing_phase_ids = [item.get("external_id") for item in phases]
+    if (
+        len(existing_phase_ids) != len(set(existing_phase_ids))
+        or set(existing_phase_ids) != set(desired_phases)
+    ):
+        raise WorkflowError("design reconciliation requires the exact existing Phase set")
+    if work_package_repositories(work_package.get("description_html") or "") != set(
+        plan["work_package"]["repositories"]
+    ):
+        raise WorkflowError("design reconciliation refuses to change participating repositories")
+
+    states = {state["id"]: state for state in client.states()}
+
+    def state_kind(item: dict[str, Any]) -> tuple[str, str]:
+        state = states.get(object_id(item.get("state")))
+        if state is None:
+            raise WorkflowError("design reconciliation cannot resolve an item state")
+        return str(state.get("group", "")).lower(), str(state.get("name", "")).lower()
+
+    wp_group, wp_name = state_kind(work_package)
+    if wp_group in {"completed", "cancelled"} or wp_name in {"review", "acceptance"}:
+        raise WorkflowError("design reconciliation refuses a terminal or review Work Package")
+
+    mutations: list[tuple[dict[str, Any], str]] = []
+    desired_wp = rendered["work_package"]["description_html"]
+    final_wp = _merge_design_sections(
+        desired_wp, str(work_package.get("description_html") or ""), DESIGN_WP_HEADINGS
+    )
+    if _canonical_html(work_package.get("description_html")) != final_wp:
+        mutations.append((work_package, final_wp))
+
+    for phase in phases:
+        external_id = str(phase.get("external_id"))
+        desired_html = desired_phases[external_id]["description_html"]
+        current_html = str(phase.get("description_html") or "")
+        group, name = state_kind(phase)
+        if group in {"completed", "cancelled"} or name in {"review", "acceptance"}:
+            desired_boundaries = phase_summary(desired_html)["sections"].get("明确边界", "")
+            current_boundaries = phase_summary(current_html)["sections"].get("明确边界", "")
+            if not _phase_contract_matches(current_html, desired_html) or desired_boundaries != current_boundaries:
+                raise WorkflowError("design reconciliation refuses to change a terminal or review Phase")
+            continue
+        if group == "started":
+            if not _phase_contract_matches(current_html, desired_html):
+                raise WorkflowError("design reconciliation refuses to change an active Phase contract")
+            final_html = _replace_phase_boundaries(current_html, desired_html)
+            missing = _workflow_markers(current_html) - _workflow_markers(final_html)
+            if missing:
+                raise WorkflowError("design reconciliation would remove recorded Phase evidence")
+            current_summary, final_summary = phase_summary(current_html), phase_summary(final_html)
+            if (
+                final_summary["checked"] != current_summary["checked"]
+                or final_summary["partial_marker_indexes"] != current_summary["partial_marker_indexes"]
+                or final_summary["sections"].get("证据") != current_summary["sections"].get("证据")
+                or final_summary["sections"].get("实际证据") != current_summary["sections"].get("实际证据")
+            ):
+                raise WorkflowError("design reconciliation would change active Phase progress or evidence")
+        elif group in {"backlog", "unstarted"}:
+            summary = phase_summary(current_html)
+            retained = [
+                heading for heading, _ in _html_section_blocks(current_html)
+                if heading not in DESIGN_PHASE_HEADINGS
+            ]
+            if summary["checked"] or summary["partial_marker_indexes"] or _workflow_markers(current_html) or retained:
+                raise WorkflowError("design reconciliation refuses evidenced or progressed unstarted Phase")
+            final_html = _canonical_html(desired_html)
+        else:
+            raise WorkflowError(f"design reconciliation does not support Phase state {name or group!r}")
+        if _canonical_html(current_html) != final_html:
+            mutations.append((phase, final_html))
+
+    actions = [
+        {
+            "action": "update", "kind": "work_item", "id": item["id"],
+            "external_id": item.get("external_id"), "fields": ["description_html"],
+            "preserved_markers": len(_workflow_markers(str(item.get("description_html") or ""))),
+        }
+        for item, _ in mutations
+    ]
+    if apply:
+        for item, final_html in mutations:
+            before = _item_snapshot(item)
+            markers = _workflow_markers(str(item.get("description_html") or ""))
+            client.request(
+                "PATCH", f"{client.project_prefix}/work-items/{item['id']}",
+                data={"description_html": final_html},
+            )
+            reread = client.retrieve_work_item(item["id"])
+            if _canonical_html(reread.get("description_html")) != final_html:
+                raise WorkflowError("design reconciliation description PATCH was not confirmed by re-read")
+            if _item_snapshot(reread) != before or not markers.issubset(
+                _workflow_markers(str(reread.get("description_html") or ""))
+            ):
+                raise WorkflowError("design reconciliation changed protected state or evidence")
+    return {
+        "actions": actions, "applied": apply, "verified": not actions or apply,
+        "work_package": f"work-package:{plan['work_package']['id']}",
+    }
+
+
 def assert_phases_ready_for_wp_review(
     phases: list[dict[str, Any]], completed_state_id: str
 ) -> None:
@@ -3516,14 +3724,14 @@ def build_parser() -> argparse.ArgumentParser:
     ledger.add_argument("--phase", type=int, required=True)
     summary = commands.add_parser("phase-summary", help="summarize Plane task-list HTML")
     summary.add_argument("--html-file", type=Path, required=True)
-    for name in ("inspect-project", "inspect-work-package", "sync-work-package", "verify-hierarchy", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"):
+    for name in ("inspect-project", "inspect-work-package", "sync-work-package", "reconcile-work-package-design", "verify-hierarchy", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"):
         command = commands.add_parser(name)
         command.add_argument("--repo", type=Path, default=Path.cwd())
         if name in {"inspect-work-package", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "migrate-work-package-repositories"}:
             command.add_argument("--wp-id", required=True)
-        if name in {"sync-work-package", "verify-hierarchy", "delete-unstarted-work-package"}:
+        if name in {"sync-work-package", "reconcile-work-package-design", "verify-hierarchy", "delete-unstarted-work-package"}:
             command.add_argument("plan", type=Path)
-        if name in {"sync-work-package", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"}:
+        if name in {"sync-work-package", "reconcile-work-package-design", "phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete", "work-package-review-start", "close-work-package", "mark-legacy-work-package", "retire-empty-module", "migrate-work-package-repositories", "delete-unstarted-work-package"}:
             command.add_argument("--apply", action="store_true")
         if name in {"phase-start", "phase-record-commit-review", "phase-record-history-rewrite", "phase-complete"}:
             command.add_argument("--phase", type=int, required=True)
@@ -3571,6 +3779,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "sync-work-package":
             result = reconcile_work_package(client, route, load_json(args.plan), apply=args.apply)
             emit({"applied": args.apply, "actions": result.actions, "verified": args.apply})
+        elif args.command == "reconcile-work-package-design":
+            emit(
+                reconcile_work_package_design(
+                    client, route, load_json(args.plan), apply=args.apply
+                )
+            )
         elif args.command == "verify-hierarchy":
             emit(verify_hierarchy(client, route, load_json(args.plan)))
         elif args.command == "phase-start":

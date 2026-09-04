@@ -106,6 +106,28 @@ python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py verify-hierarchy
 Never use `--apply` when route verification is incomplete, the project identity conflicts, or the
 read-only reconciliation contains an ambiguous match.
 
+For an approved design revision after execution has started, do not run the broad hierarchy sync.
+Use the description-only reconciler:
+
+```bash
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py \
+  reconcile-work-package-design /tmp/work-package.json --repo "$PWD"
+python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py \
+  reconcile-work-package-design /tmp/work-package.json --repo "$PWD" --apply
+```
+
+This command requires the exact existing Phase set and unchanged participating repositories. It
+leaves Module and Requirement untouched. For an active Phase it requires the current goal, ordered
+tasks, and acceptance text to match the plan, replaces only the design boundary section, and carries
+forward all commit-review and history-rewrite evidence. It may replace an unstarted Phase description
+only when that Phase has no checked task, partial marker, or evidence. Review, Acceptance, Done, and
+Cancelled descriptions are immutable. Apply sends only `description_html` and re-reads protected
+state, parent, date, priority, label, identity, and marker fields after every PATCH.
+Plane does not provide a transaction across those work items. The command therefore preflights every
+target before the first write and verifies each write independently. After an interrupted or uncertain
+apply, rerun it without `--apply` to re-read current state; never issue an automatic rollback or replay
+of the uncertain PATCH.
+
 Mutations are never retried automatically after a transport error. Re-read the target first and
 issue only an idempotent reconciliation for fields proven missing.
 

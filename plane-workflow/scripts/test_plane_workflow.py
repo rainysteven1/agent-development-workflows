@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import base64
+import copy
 import contextlib
 import hashlib
 import io
@@ -1963,6 +1964,161 @@ class PlaneWorkflowTest(unittest.TestCase):
         self.assertLess(client.log.index("POST:projects/project-id/labels"), client.log.index("POST:projects/project-id/work-items"))
         second = plane_workflow.reconcile_work_package(client, route, self.plan, apply=False)
         self.assertEqual([], second.actions)
+
+    def _design_reconcile_fixture(self):
+        route = {
+            "workspace": "platform",
+            "project_id": "project-id",
+            "project_identifier": "DCP",
+            "project_name": "Delivery",
+            "external_source": "delivery-v1",
+        }
+        rendered = plane_workflow.render_objects(self.plan, route["external_source"])
+        requirement = {"id": "requirement-id", "state": "ready", **rendered["requirement"]}
+        work_package = {
+            "id": "wp-id", "state": "backlog", "parent": requirement["id"], "labels": ["label-id"],
+            **{key: value for key, value in rendered["work_package"].items() if key not in {"parent_external_id", "label"}},
+        }
+        phases = [
+            {
+                "id": f"phase-{index}", "state": "started" if index == 0 else "backlog",
+                "parent": work_package["id"], "labels": ["label-id"],
+                **{key: value for key, value in spec.items() if key not in {"number", "parent_external_id", "label"}},
+            }
+            for index, spec in enumerate(rendered["phases"])
+        ]
+        review_marker = f"{plane_workflow.COMMIT_REVIEW_MARKER_PREFIX}group/backend:{'a' * 40}:{'b' * 64}"
+        rewrite_marker = f"{plane_workflow.HISTORY_REWRITE_MARKER_PREFIX}group/backend:{'c' * 40}:{'d' * 64}"
+        design_html = phases[0]["description_html"]
+        design_html = design_html.replace(
+            'data-checked="false"', 'data-checked="true"', 1
+        ).replace(
+            '<input type="checkbox">', '<input type="checkbox" checked="">', 1
+        ).replace(
+            "<h3>证据</h3><p>待本 Phase 完成后回填真实测试与运行证据。</p>",
+            "<h3>证据</h3><p>Existing active Phase evidence must survive reconciliation.</p>",
+        )
+        evidence_html = (
+            f"<h3>Commit 审查记录</h3><p><code>{review_marker}</code></p>"
+            f"<h3>History-only feature autosquash</h3><p><code>{rewrite_marker}</code></p>"
+        )
+        phases[0]["description_html"] = (
+            "<div><div>" + design_html + "</div></div>"
+            "<div><div>" + evidence_html + "</div></div>"
+        )
+        objects = {item["id"]: item for item in [requirement, work_package, *phases]}
+
+        class FakeClient:
+            project_prefix = "projects/project-id"
+
+            def __init__(self) -> None:
+                self.log: list[tuple[str, str, dict | None]] = []
+                self.objects = objects
+
+            def project(self) -> dict:
+                return {"id": "project-id", "identifier": "DCP", "name": "Delivery", "external_source": "delivery-v1", "archived_at": None}
+
+            def states(self) -> list[dict]:
+                return [
+                    {"id": "backlog", "name": "Backlog", "group": "backlog"},
+                    {"id": "ready", "name": "Ready", "group": "unstarted"},
+                    {"id": "started", "name": "In Progress", "group": "started"},
+                    {"id": "review", "name": "Review", "group": "started"},
+                    {"id": "done", "name": "Done", "group": "completed"},
+                    {"id": "cancelled", "name": "Cancelled", "group": "cancelled"},
+                ]
+
+            def work_items(self) -> list[dict]:
+                return copy.deepcopy(list(self.objects.values()))
+
+            def retrieve_work_item(self, item_id: str) -> dict:
+                return copy.deepcopy(self.objects[item_id])
+
+            def request(self, method: str, suffix: str, *, params=None, data=None):
+                self.log.append((method, suffix, data))
+                if method != "PATCH":
+                    raise AssertionError((method, suffix, data))
+                item_id = suffix.rsplit("/", 1)[1]
+                self.objects[item_id].update(data)
+                return copy.deepcopy(self.objects[item_id])
+
+        return route, FakeClient(), work_package, phases, review_marker, rewrite_marker
+
+    def test_design_reconcile_preserves_started_phase_evidence_and_non_design_fields(self) -> None:
+        route, client, work_package, phases, review_marker, rewrite_marker = self._design_reconcile_fixture()
+        plan = json.loads(json.dumps(self.plan))
+        plan["work_package"]["boundaries"].append("New storage boundary.")
+        plan["phases"][0]["boundaries"] = ["Started phase boundary."]
+        plan["phases"][1]["tasks"][0] = "Updated future task."
+        snapshots = {
+            item["id"]: {key: item.get(key) for key in ("name", "state", "parent", "priority", "start_date", "target_date", "labels")}
+            for item in [work_package, *phases]
+        }
+
+        result = plane_workflow.reconcile_work_package_design(client, route, plan, apply=True)
+
+        self.assertTrue(result["verified"])
+        self.assertEqual(
+            {"work-package:WP-01A", "phase:WP-01A:0", "phase:WP-01A:1"},
+            {action["external_id"] for action in result["actions"]},
+        )
+        self.assertIn("New storage boundary.", work_package["description_html"])
+        self.assertIn("Started phase boundary.", phases[0]["description_html"])
+        self.assertIn(review_marker, phases[0]["description_html"])
+        self.assertIn(rewrite_marker, phases[0]["description_html"])
+        self.assertEqual(1, plane_workflow.phase_summary(phases[0]["description_html"])["checked"])
+        self.assertIn("Existing active Phase evidence", phases[0]["description_html"])
+        self.assertIn("Updated future task.", phases[1]["description_html"])
+        for item in [work_package, *phases]:
+            self.assertEqual(snapshots[item["id"]], {key: item.get(key) for key in snapshots[item["id"]]})
+        self.assertTrue(all(list((data or {}).keys()) == ["description_html"] for _, _, data in client.log))
+        repeated = plane_workflow.reconcile_work_package_design(client, route, plan, apply=False)
+        self.assertEqual([], repeated["actions"])
+        self.assertTrue(repeated["verified"])
+
+    def test_design_reconcile_rejects_started_phase_contract_or_terminal_phase_change(self) -> None:
+        route, client, _, phases, _, _ = self._design_reconcile_fixture()
+        changed = json.loads(json.dumps(self.plan))
+        changed["phases"][0]["tasks"][0] = "Changed active task."
+        with self.assertRaisesRegex(plane_workflow.WorkflowError, "active Phase contract"):
+            plane_workflow.reconcile_work_package_design(client, route, changed, apply=False)
+
+        phases[0]["state"] = "done"
+        unchanged = json.loads(json.dumps(self.plan))
+        unchanged["phases"][0]["boundaries"] = ["Late boundary."]
+        with self.assertRaisesRegex(plane_workflow.WorkflowError, "terminal or review Phase"):
+            plane_workflow.reconcile_work_package_design(client, route, unchanged, apply=False)
+
+        phases[0]["state"] = "started"
+        duplicate = copy.deepcopy(phases[1])
+        duplicate["id"] = "duplicate-phase"
+        client.objects[duplicate["id"]] = duplicate
+        with self.assertRaisesRegex(plane_workflow.WorkflowError, "exact existing Phase set"):
+            plane_workflow.reconcile_work_package_design(client, route, self.plan, apply=False)
+
+    def test_design_sections_ignore_plane_editor_div_wrappers(self) -> None:
+        wrapped = (
+            '<div data-editor-node="true"><div><h3>目标</h3><p>Goal.</p></div></div>'
+            "<div><h3>Commit 审查记录</h3><div><p><code>marker</code></p></div></div>"
+        )
+        blocks = plane_workflow._html_section_blocks(wrapped)
+        self.assertEqual(
+            ["目标", "Commit 审查记录"],
+            [heading for heading, _ in blocks],
+        )
+        self.assertTrue(all(block.count("<div") == block.count("</div>") for _, block in blocks))
+
+    def test_design_snapshot_normalizes_expanded_plane_relations(self) -> None:
+        compact = {"state": "state-id", "parent": "parent-id", "labels": ["b", "a"]}
+        expanded = {
+            "state": {"id": "state-id", "name": "In Progress"},
+            "parent": {"id": "parent-id"},
+            "labels": [{"id": "a"}, {"id": "b"}],
+        }
+        self.assertEqual(
+            plane_workflow._item_snapshot(compact),
+            plane_workflow._item_snapshot(expanded),
+        )
 
     def _unstarted_delete_fixture(self):
         route = {
