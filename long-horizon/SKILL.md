@@ -56,6 +56,29 @@ When you do ask the user:
 - show what you already checked
 - present the decision boundary, not raw confusion
 
+An explicit long-horizon request is standing authority for reversible local work
+inside the accepted outcome. Do not interrupt merely because an internal retry,
+review-remediation count, Phase boundary, commit gate, or diagnostic checkpoint
+was reached. Change the diagnostic variable, preserve evidence, and continue
+while the next action:
+
+- remains inside the fixed acceptance, trust, and repository boundaries;
+- is local, reversible, and does not need new credentials or external mutation;
+- addresses a demonstrated failure rather than reviewer preference; and
+- still shows forward progress under a no-progress watchdog.
+
+For review remediation, record the reproduced blocker and the changed
+diagnostic/design variable at the post-checkpoint audit. Two consecutive local
+corrections with the same failing acceptance check and no new causal evidence
+are no progress: stop reviewer-driven edits, return to diagnosis/design, and
+leave the item visibly incomplete if no new safe local strategy exists. This
+ends a loop without turning the loop counter into a permission prompt.
+
+Escalate only when continuing requires a product/scope decision, new authority,
+an irreversible or externally visible action, unavailable credentials/hardware,
+or a consequential boundary change. A numerical retry or remediation threshold
+triggers an internal strategy audit, not automatic human approval.
+
 Bad:
 
 ```text
@@ -75,3 +98,4 @@ and the repo has no explicit rule. Which compatibility target matters more?
 - making important tradeoffs with no visible reasoning
 - spending too long researching a low-value decision
 - escalating one question at a time
+- converting an internal quality-budget checkpoint into a user permission gate

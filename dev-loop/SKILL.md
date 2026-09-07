@@ -115,11 +115,12 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   plan and map each required criterion to its planned test or real-usage
   mechanism. Do not let a green suite substitute for an unmapped requirement.
 - Before the first review, freeze the feature's acceptance checks, direct
-  consumers, trust boundaries, and autonomous remediation budget. Unless the
-  repository or user sets a smaller limit, allow at most two remediation
-  commits for one feature group: one initial review plus at most two fixup
-  reviews, three review verdicts total. Increasing that limit requires explicit
-  user direction after reporting why the first budget did not converge.
+  consumers, trust boundaries, and autonomous remediation checkpoint. After two
+  remediation commits for one feature group, pause code changes for an internal
+  convergence audit: revalidate the reproduction, normalize findings by root
+  cause, and change the diagnostic or design variable before another correction.
+  This checkpoint is not a user approval gate when `$long-horizon` applies and
+  the remaining work is local, reversible, acceptance-bound, and progressing.
 - Order increments so each committed state remains buildable and includes the
   tests and generated artifacts required for that state.
 - Do not create WIP, placeholder, knowingly failing, or cleanup-only commits to
@@ -159,7 +160,9 @@ replaces its Git, review, or completion gates.
    diff, then commit with that reviewed message unless the user opted out of
    commits or the environment is not a Git repository. For review remediation,
    use `$git-workflow-and-versioning`'s `git commit --fixup=<feature-commit>`
-   contract; do not invent another independent message.
+   contract. If a verified repository hook rejects fixup subjects, use one
+   ordinary Conventional Commit remediation, retain the reviewed linear history,
+   and skip autosquash; do not interrupt the user over this local mechanism.
 8. Verify the commit identity and that no intended staged content was left
    behind. Record the command evidence tied to that commit. Treat any prior
    task structural index as stale; rely on a repository invalidation hook when
@@ -178,13 +181,18 @@ replaces its Git, review, or completion gates.
     permitted next commit is an acceptance-complete remediation commit, which
     repeats this entire per-commit loop with its own fresh reviewer. Start the
     next planned increment only after the current implementation/remediation
-    chain has no unresolved findings and its final review is accepted.
-11. If this is a feature/remediation group, converge it before the next planned
-    feature. Require private-history authority, run autosquash from the feature
-    parent, prove the final tree equals the last reviewed tree, and preserve the
-    original receipts. For a Plane-managed task, record the original-to-final
-    mapping with `phase-record-history-rewrite` before continuing. A tree change
-    makes the squashed result a new commit requiring verification and OCR.
+    chain has no unresolved findings and its final review is accepted. The OCR
+    infrastructure exception below permits only independent local increments;
+    dependent behavior and integration remain stopped.
+11. If every remediation in the feature group uses a `fixup!` subject, converge
+    it before the next planned feature. Require private-history authority, run
+    autosquash from the feature parent, prove the final tree equals the last
+    reviewed tree, and preserve the original receipts. For a Plane-managed task,
+    record the original-to-final mapping with `phase-record-history-rewrite`
+    before continuing. A tree change makes the squashed result a new commit
+    requiring verification and OCR. Preserve any group containing a
+    repository-required normal remediation as reviewed linear history instead
+    of rewriting it.
 
 ### Bound review convergence
 
@@ -210,11 +218,16 @@ Deterministic acceptance checks, tests, and real usage decide whether the
 feature works. Review is an adversarial diagnostic gate, not an optimization
 objective; never use `findings == 0` as the loop condition.
 
-When the two-round remediation budget is exhausted, stop autonomous review
-iteration. If a reproducible in-scope blocker remains, keep the feature `not
-complete` and request a scope/budget decision; do not create a third fixup. If
-only duplicate, out-of-scope, or speculative findings remain, record their
-dispositions, accept the review gate, and continue to history convergence.
+After two remediation commits, run the convergence audit described above. When
+`$long-horizon` applies, a reproducible in-scope blocker may receive another
+local reversible correction only when it uses a changed diagnostic/design
+variable and preserves the frozen acceptance and trust boundary. Without an
+explicit long-horizon request, report the remaining blocker and request the
+project's normal scope/budget decision. Keep duplicate, out-of-scope, or
+speculative findings as dispositions; do not write code for them. Under
+long-horizon, ask the user only when correction requires a product/scope choice,
+new authority, irreversible/external action, credentials/hardware, or another
+consequential boundary change.
 
 When a check fails, stop this increment. Record the earliest actionable error,
 the demonstrated cause or labeled hypothesis, cleanup result, and next changed
@@ -222,18 +235,26 @@ diagnostic variable. Do not rerun an unchanged failing chain. Continue the
 changed diagnostic and corrective work in the same turn; only dependent planned
 increments remain blocked.
 
-Count distinct evidence-backed correction attempts for the same failure. After
-three unsuccessful fixes, do not attempt a fourth: revalidate the reproduction,
-return to `$diagnosing-bugs`, inspect architecture through `$codebase-design`,
-and obtain user direction for any consequential boundary change.
+Count only evidence-backed corrective commits for the same reproduced failure;
+exclude infrastructure retries and duplicate/speculative dispositions. After
+two consecutive post-checkpoint corrections leave the same acceptance check
+failing without new causal evidence, stop reviewer-driven edits, revalidate the
+reproduction, return to `$diagnosing-bugs`, and inspect architecture through
+`$codebase-design`. Continue only after those checks produce a new safe local
+strategy. Otherwise leave the item incomplete; obtain user direction only for a
+consequential boundary or authority change.
 
-If the formal OCR verdict is incomplete or failed, stop at the review checkpoint,
-preserve its native receipt/log, and report `not complete`; do not silently wait,
-create a later commit, or claim acceptance.
-This checkpoint ends the active turn only when a changed packet scope or
-invocation cannot make meaningful progress without a waiver, user input, or an
-external-state change. Otherwise diagnose the timeout and continue within the
-same turn under `$open-code-review`'s retry rules.
+If the formal OCR verdict is incomplete or failed, stop dependent integration
+and acceptance claims, preserve its native receipt/log, and diagnose it under
+`$open-code-review`'s retry rules. After the bounded retry/resume is genuinely
+unavailable, an explicit `$long-horizon` request permits later local, reversible
+increments to continue after one fresh independent fallback review of the exact
+commit. Only increments independent of the unreviewed behavior may proceed;
+dependent behavior, integration, and Phase advancement remain stopped. Keep the
+formal gate visibly incomplete, never create a fake receipt, and do not close
+its Phase/WP. Retry the immutable commit when infrastructure recovers; end the
+active turn only when no other meaningful safe work remains or the next action
+needs user authority.
 
 ### 5. Verify the complete branch
 

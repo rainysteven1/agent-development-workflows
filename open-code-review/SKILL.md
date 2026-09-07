@@ -47,13 +47,12 @@ an optional Luna second opinion is selected only for high-risk changes.
 
 ## Bounded finding convergence
 
-Freeze the reviewed feature's acceptance checks, direct consumers, trust
-boundaries, and remediation budget in the first packet. A reviewer may find a
-violation of that contract; it may not silently widen the contract or threat
-model. The default autonomous budget is two remediation commits per feature
-group: one initial verdict plus at most two fixup verdicts, three review
-iterations total. A repository may lower it. Only the user may authorize
-another round after the exhausted budget and remaining blocker are reported.
+Freeze the reviewed feature's acceptance checks, direct consumers, and trust
+boundaries in the first packet. A reviewer may find a violation of that
+contract; it may not silently widen the contract or threat model. Two
+remediation commits are the default convergence checkpoint, not a user approval
+gate. At that checkpoint, normalize remaining findings, revalidate the cheapest
+reproduction, and change the diagnostic or design variable before continuing.
 
 Normalize findings by root cause and stable path/rule identity before deciding
 another commit:
@@ -65,18 +64,29 @@ another commit:
 - Dismiss a speculative finding when it has no current source/test/runtime
   proof; record the evidence that would reopen it.
 
-Only the first category consumes a remediation round. A narrower variant of the
-same already-dispositioned race or hypothetical is not progress and must not
-start another review. When the budget is exhausted, return one terminal
-synthesis: unresolved in-scope blockers mean `not complete` and require user
-direction; otherwise preserve dispositions and accept. Never use repeated
-review calls as a substitute for that synthesis.
+Only the first category justifies a remediation round. A narrower variant of
+the same already-dispositioned race or hypothetical is not progress and must
+not start another review. After the default checkpoint, continue autonomously
+only when `$long-horizon` applies and a demonstrated in-scope blocker has a
+local, reversible correction that changes the diagnostic/design variable and
+preserves the frozen boundary. Two consecutive post-checkpoint corrections that
+leave the same acceptance check failing without new causal evidence stop
+reviewer-driven edits and return control to diagnosis/design. Escalate only when
+resolution needs a product/scope decision, new authority, credentials/hardware,
+or irreversible/external action. Never use repeated review calls as a
+substitute for convergence synthesis.
 
 Tests, explicit acceptance checks, and real usage are the convergence oracle;
 zero reviewer findings is not. A timeout or interruption may resume the same
 immutable OCR session once and does not consume a remediation round. If that
 single resume also fails, preserve the artifacts and return `unavailable`; do
-not start another equivalent review session automatically.
+not start another equivalent review session automatically. Under an explicit
+`$long-horizon` request, add one fresh independent read-only fallback review of
+the exact commit and allow subsequent local implementation to
+continue. The fallback never becomes an OCR receipt and cannot close a
+Phase/WP; only work independent of the unreviewed behavior may proceed. This is
+the single non-OCR fallback, not another provider retry, and only avoids turning
+provider failure into a user interruption.
 
 ## Full-Context-First Fallback Protocol
 
@@ -139,6 +149,9 @@ FULL_CONTEXT_ATTEMPT
 An ordinary zero exit code, partial JSON, missing preview item, or budget-skipped
 batch is not acceptance. Stop at the first unpassed checkpoint and report the
 failed edge, preserved artifact, and next changed diagnostic variable.
+Under the explicit long-horizon OCR-outage exception, this stop applies to the
+unreviewed behavior, dependent work, integration, and acceptance claims; an
+independent local increment may continue with the preserved fallback evidence.
 
 ## Delegation Workflow
 
@@ -202,10 +215,12 @@ failed edge, preserved artifact, and next changed diagnostic variable.
 8. Disposition every finding under the bounded convergence contract. Until the increment is accepted,
    only in-scope remediation work may proceed. Commit each acceptance-complete remediation separately,
    rerun its ordinary checks, and start a new OCR manifest and fresh review for that commit while the
-   feature budget remains. For high-risk changes, add a separate fresh Luna second opinion; never carry
-   coverage or synthesis across commits. Record which later commit resolves each fixed finding. Start
-   the next planned increment only after the remediation chain is accepted; an exhausted in-scope
-   blocker remains `not complete` and requires user direction.
+   convergence watchdog shows progress. For high-risk changes, add a separate fresh Luna second opinion;
+   never carry coverage or synthesis across commits. Record which later commit resolves each fixed
+   finding. Start the next planned increment only after the remediation chain is accepted. An unresolved
+   blocker under `$long-horizon` asks for user direction only when its next safe resolution crosses the
+   frozen boundary or requires new authority; an internal review count alone never triggers that
+   interruption. Without explicit long-horizon authority, use the project's normal scope/budget gate.
 
 ## Commit Receipt And Plane Phase Evidence
 

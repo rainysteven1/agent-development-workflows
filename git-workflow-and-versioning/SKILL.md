@@ -102,6 +102,11 @@ For a review-remediation commit, keep the same atomic staging checks but use
 `git commit --fixup=<feature-commit>` instead of generating a new independent
 message. Target the root feature commit, not a previous fixup. The fixup still
 receives its own ordinary verification and immutable per-commit review.
+If the repository's verified commit hook rejects fixup subjects, use one normal
+Conventional Commit for the remediation and retain the linear feature/fix
+history. Do not bypass the hook, rewrite the hook as part of the feature, or ask
+the user to choose between equivalent local history mechanics. A normal
+remediation chain is not autosquashed.
 
 If the staged diff mixes reasons to change, unstage only task-owned paths or
 hunks and split it before committing. Never use a destructive reset as routine
@@ -110,11 +115,11 @@ workflow recovery.
 ## Converge one feature group
 
 A feature group is one independently meaningful feature commit followed only by
-its review/CI remediation fixups. Do not include another feature merely because
+its review/CI remediation commits. Do not include another feature merely because
 it belongs to the same Phase, Work Package, branch, or Merge Request.
 
-After the feature and every fixup have accepted review evidence, and before
-starting the next feature:
+When every remediation uses a `fixup!` subject, after the feature and every
+fixup have accepted review evidence and before starting the next feature:
 
 1. Require a private, unpushed branch or explicit authorization to rewrite the
    shared branch. Record the feature parent, every original SHA/parent, the

@@ -226,7 +226,10 @@ conflicts; it never deletes evidence and re-reads every PATCH.
 4. Execute exactly one checklist item through the repository development loop: implement, targeted
    test, real usage when applicable, staged-diff inspection, atomic commit, per-commit OCR and fresh
    time-bounded Luna review, feedback/fix, and evidence. A checklist item may still require several
-   commits.
+   commits. If bounded OCR retry is unavailable and `$long-horizon` applies, preserve the failed
+   manifest and independent fallback review locally, continue only checklist work independent of the
+   unreviewed behavior, and leave that commit's Plane receipt and Phase completion pending until
+   formal OCR recovers.
 5. Update only the local ledger after the item. Record state, commands, results, runtime observations,
    failures, cleanup, and next action. Keep Plane checklist items unchecked while the Phase is open.
 6. Keep failed, blocked, and deferred items visible. A retry must preserve the earliest error,
@@ -242,8 +245,12 @@ conflicts; it never deletes evidence and re-reads every PATCH.
 Do not PATCH Plane item by item. Do not batch several Phases into one completion update. Keep later
 hardening in the ledger's `延期` section without executing or counting it in the current Phase. A
 Phase boundary neither creates a commit nor triggers review, but every actual material commit inside
-the Phase must finish `$dev-loop`'s OCR and fresh-reviewer gate before another planned commit begins.
-Do not defer commit review to Phase or Work Package completion.
+the Phase normally finishes `$dev-loop`'s OCR and fresh-reviewer gate before another planned commit
+begins. The only exception is `$long-horizon` continuation after bounded OCR infrastructure failure:
+preserve the failed manifest and exact-commit fallback review, continue only independent local
+reversible work inside the same active Phase, and leave dependent work, Phase advancement, the formal
+receipt, and Phase completion pending. Do not defer a working review service merely for convenience
+or replace missing receipts at Work Package completion.
 
 ## Record Commit Evidence And Close The Work Package
 
