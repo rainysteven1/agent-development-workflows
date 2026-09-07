@@ -1,101 +1,48 @@
 ---
 name: long-horizon
-description: "Use when the user wants Codex to work autonomously with fewer interrupts. Provides a decision ladder from convention check to user escalation, plus lightweight decision logging so longer tasks can continue without constant approval requests. Trigger on \"just do it\", \"be autonomous\", \"don't ask every little thing\", or long-running implementation work. 中文触发：自己做、别老问我、自主执行、长时间任务、后台做。"
+description: "Use when the user explicitly wants Codex to work autonomously with fewer interrupts. Runs a durable evidence-driven harness that continues safe local work, detects real no-progress loops, coordinates reviewers without chasing zero findings, and interrupts only at authority boundaries. Trigger on explicit requests such as \"just do it\", \"be autonomous\", \"don't ask every little thing\", or \"work autonomously for a long time\". 中文触发：自己做、别老问我、自主执行、长时间自主任务、后台做。"
 ---
 
 # Long Horizon
 
-## Overview
+Use the autonomous harness for the full requested scope. Before taking task
+actions, read [references/harness-contract.md](references/harness-contract.md)
+completely. That reference is the single source of truth for execution states,
+progress detection, reviewer convergence, durable evidence, and human
+interrupts; linked workflows must not invent separate retry or approval rules.
 
-This skill defines how to make progress without consuming the user's attention too early. The rule is simple: exhaust cheap evidence before escalating.
+## Start the run
 
-## Decision Ladder
+1. Fix the objective, observable acceptance checks, trust boundaries, affected
+   repositories, and explicitly authorized external actions.
+2. Create or reuse the repository/Plane ledger required by the controlling
+   workflow. Initialize and maintain every field in the harness contract's
+   durable checkpoint, including failure-detector, finding, evidence, approval,
+   and resume state.
+3. Classify the run with the harness state model and execute the next safe edge.
 
-1. `Convention check`
-   - Look for repo rules, existing patterns, config files, and adjacent code.
-   - If the answer is already local and clear, follow it silently.
+## Continue autonomously
 
-2. `Codebase research`
-   - Read the related modules, tests, docs, and recent history.
-   - Use this level for implementation patterns and behavior expectations.
+An explicit long-horizon request is standing authority for local, reversible,
+in-scope work. Test failures, review findings, commit/Phase boundaries, retry
+counts, timeouts, rate limits, and unavailable quality infrastructure are
+observations, not automatic user interrupts.
 
-3. `External research`
-   - Read official docs or primary sources when the repo is silent.
-   - Use this for framework behavior, library choices, and ecosystem questions.
+Keep deterministic acceptance checks as the completion oracle. Reviewers remain
+mandatory where the repository requires them, but their findings enter the
+shared classifier and finding ledger; reviewer wording, severity, or a target of
+zero findings never drives the loop by itself.
 
-4. `Objective reasoning`
-   - If multiple paths are valid, choose using the active project targets.
-   - Prefer the option that preserves correctness and reduces future complexity.
+## Finish or pause
 
-5. `Ask the user`
-   - Use only for product intent, missing credentials, irreversible actions, or unresolved ambiguity after the earlier levels.
+Continue until the objective is `done`, or until every remaining edge is
+`waiting_external` or `waiting_infrastructure`. Pause only the dependent edge;
+finish any independent safe work first. `waiting_infrastructure` reports a
+resume trigger without asking for permission. Never broaden user authority,
+manufacture evidence, close a Plane item with a missing gate, or convert a
+fallback review into a formal receipt.
 
-## Logging Rule
-
-Record meaningful Level 2+ decisions in a durable place when the task is long or the tradeoff is non-obvious.
-
-Good options:
-
-- `docs/decisions.md`
-- a dated note in `notes/`
-- the final task summary if no project note exists
-
-A short entry is enough:
-
-```text
-Decision: chose zod over joi
-Basis: external research
-Reason: better TypeScript inference, lower duplication
-```
-
-## Escalation Rule
-
-When you do ask the user:
-
-- batch related questions together
-- show what you already checked
-- present the decision boundary, not raw confusion
-
-An explicit long-horizon request is standing authority for reversible local work
-inside the accepted outcome. Do not interrupt merely because an internal retry,
-review-remediation count, Phase boundary, commit gate, or diagnostic checkpoint
-was reached. Change the diagnostic variable, preserve evidence, and continue
-while the next action:
-
-- remains inside the fixed acceptance, trust, and repository boundaries;
-- is local, reversible, and does not need new credentials or external mutation;
-- addresses a demonstrated failure rather than reviewer preference; and
-- still shows forward progress under a no-progress watchdog.
-
-For review remediation, record the reproduced blocker and the changed
-diagnostic/design variable at the post-checkpoint audit. Two consecutive local
-corrections with the same failing acceptance check and no new causal evidence
-are no progress: stop reviewer-driven edits, return to diagnosis/design, and
-leave the item visibly incomplete if no new safe local strategy exists. This
-ends a loop without turning the loop counter into a permission prompt.
-
-Escalate only when continuing requires a product/scope decision, new authority,
-an irreversible or externally visible action, unavailable credentials/hardware,
-or a consequential boundary change. A numerical retry or remediation threshold
-triggers an internal strategy audit, not automatic human approval.
-
-Bad:
-
-```text
-Should I use headers or cookies?
-```
-
-Better:
-
-```text
-Current browser clients use cookies, the new API work would be cleaner with headers,
-and the repo has no explicit rule. Which compatibility target matters more?
-```
-
-## Anti-Patterns
-
-- asking before checking local conventions
-- making important tradeoffs with no visible reasoning
-- spending too long researching a low-value decision
-- escalating one question at a time
-- converting an internal quality-budget checkpoint into a user permission gate
+When an interrupt is genuinely required, reuse any matching approval already
+recorded for the same action class, scope, and target. Otherwise batch the
+unresolved boundary into one concise request that states evidence, surviving
+work, and the exact decision needed.

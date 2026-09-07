@@ -11,6 +11,9 @@ their specialized mechanics.
 
 ## Linked skill responsibilities
 
+- `$long-horizon`: when explicitly active, own run state, failure signatures,
+  reviewer convergence, degraded-mode continuation, and human interrupts through
+  its single harness contract.
 - `$git-workflow-and-versioning`: resolve the real integration target, define
   atomic increments, stage exact changes, inspect history, and maintain branch
   and commit integrity.
@@ -115,12 +118,9 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   plan and map each required criterion to its planned test or real-usage
   mechanism. Do not let a green suite substitute for an unmapped requirement.
 - Before the first review, freeze the feature's acceptance checks, direct
-  consumers, trust boundaries, and autonomous remediation checkpoint. After two
-  remediation commits for one feature group, pause code changes for an internal
-  convergence audit: revalidate the reproduction, normalize findings by root
-  cause, and change the diagnostic or design variable before another correction.
-  This checkpoint is not a user approval gate when `$long-horizon` applies and
-  the remaining work is local, reversible, acceptance-bound, and progressing.
+  consumers, and trust boundaries. When `$long-horizon` is active, load and use
+  its harness contract before the first task action; do not duplicate its retry,
+  reviewer, progress, or escalation rules in this workflow.
 - Order increments so each committed state remains buildable and includes the
   tests and generated artifacts required for that state.
 - Do not create WIP, placeholder, knowingly failing, or cleanup-only commits to
@@ -178,12 +178,14 @@ replaces its Git, review, or completion gates.
    changes only, add one fresh Luna second opinion against the same packet; it is
    supplementary and never replaces the OCR verdict.
 10. Disposition every finding. While this increment is not accepted, the only
-    permitted next commit is an acceptance-complete remediation commit, which
-    repeats this entire per-commit loop with its own fresh reviewer. Start the
-    next planned increment only after the current implementation/remediation
-    chain has no unresolved findings and its final review is accepted. The OCR
-    infrastructure exception below permits only independent local increments;
-    dependent behavior and integration remain stopped.
+    permitted next commit is an acceptance-complete remediation commit. Triage
+    the complete finding set first, normalize duplicates, and group open findings
+    by root cause; do not create one patch per reviewer comment. The remediation
+    repeats this per-commit loop with its own fresh reviewer. Start dependent
+    work only after the finding ledger has no open blocker. The sole exception
+    is explicit `$long-horizon` degraded mode: a materially independent local
+    increment may commit after its own deterministic checks and exact-commit
+    fallback review, while every missing formal receipt remains open.
 11. If every remediation in the feature group uses a `fixup!` subject, converge
     it before the next planned feature. Require private-history authority, run
     autosquash from the feature parent, prove the final tree equals the last
@@ -196,38 +198,11 @@ replaces its Git, review, or completion gates.
 
 ### Bound review convergence
 
-Reviewer severity does not expand the feature contract. Classify each finding
-against the acceptance checks, direct effects, and trust boundaries frozen
-before review:
-
-- `blocking`: reproducible evidence shows the current change violates that
-  contract; remediate it within the remaining budget.
-- `duplicate`: the same root cause is already fixed or recorded; disposition it
-  as dismissed with the earlier finding identity.
-- `out_of_scope`: it requires a new consumer, attacker capability, architecture,
-  or product behavior; record the boundary and do not change this feature.
-- `speculative`: no current source, test, or runtime evidence demonstrates the
-  failure; dismiss it with the missing proof and observable reopen condition.
-
-Only a blocking finding creates another fixup/review round. A reviewer that
-restates the same concern at a narrower race window without new evidence is no
-progress, not a new round. Infrastructure retries do not consume remediation
-rounds, but remain bounded by `$open-code-review`.
-
-Deterministic acceptance checks, tests, and real usage decide whether the
-feature works. Review is an adversarial diagnostic gate, not an optimization
-objective; never use `findings == 0` as the loop condition.
-
-After two remediation commits, run the convergence audit described above. When
-`$long-horizon` applies, a reproducible in-scope blocker may receive another
-local reversible correction only when it uses a changed diagnostic/design
-variable and preserves the frozen acceptance and trust boundary. Without an
-explicit long-horizon request, report the remaining blocker and request the
-project's normal scope/budget decision. Keep duplicate, out-of-scope, or
-speculative findings as dispositions; do not write code for them. Under
-long-horizon, ask the user only when correction requires a product/scope choice,
-new authority, irreversible/external action, credentials/hardware, or another
-consequential boundary change.
+`$open-code-review` owns immutable review execution and receipts. The
+`$long-horizon` harness contract owns finding identity, evidence classification,
+root-cause grouping, no-progress detection, and user interruption whenever that
+mode is active. Deterministic acceptance checks, tests, and real usage remain the
+completion oracle; reviewer severity and zero findings do not.
 
 When a check fails, stop this increment. Record the earliest actionable error,
 the demonstrated cause or labeled hypothesis, cleanup result, and next changed
@@ -235,26 +210,15 @@ diagnostic variable. Do not rerun an unchanged failing chain. Continue the
 changed diagnostic and corrective work in the same turn; only dependent planned
 increments remain blocked.
 
-Count only evidence-backed corrective commits for the same reproduced failure;
-exclude infrastructure retries and duplicate/speculative dispositions. After
-two consecutive post-checkpoint corrections leave the same acceptance check
-failing without new causal evidence, stop reviewer-driven edits, revalidate the
-reproduction, return to `$diagnosing-bugs`, and inspect architecture through
-`$codebase-design`. Continue only after those checks produce a new safe local
-strategy. Otherwise leave the item incomplete; obtain user direction only for a
-consequential boundary or authority change.
+In ordinary mode, after three unsuccessful evidence-backed corrections for the
+same failure, return to `$diagnosing-bugs` and `$codebase-design` before another
+edit. In long-horizon mode, use the contract's normalized failure signature,
+single nudge, and `no_progress` transition instead of counting changed attempts.
 
-If the formal OCR verdict is incomplete or failed, stop dependent integration
-and acceptance claims, preserve its native receipt/log, and diagnose it under
-`$open-code-review`'s retry rules. After the bounded retry/resume is genuinely
-unavailable, an explicit `$long-horizon` request permits later local, reversible
-increments to continue after one fresh independent fallback review of the exact
-commit. Only increments independent of the unreviewed behavior may proceed;
-dependent behavior, integration, and Phase advancement remain stopped. Keep the
-formal gate visibly incomplete, never create a fake receipt, and do not close
-its Phase/WP. Retry the immutable commit when infrastructure recovers; end the
-active turn only when no other meaningful safe work remains or the next action
-needs user authority.
+If formal OCR is incomplete or failed, preserve its native artifact and follow
+`$open-code-review`. A fallback never becomes acceptance evidence. When
+`$long-horizon` is active, its `degraded` state decides what independent local
+work may continue and what dependent claims remain stopped.
 
 ### 5. Verify the complete branch
 

@@ -244,8 +244,10 @@ uncontained commits, incomplete OCR terminal/coverage evidence, a reused session
 incomplete synthesis, and undispositioned findings. A finding-remediation commit gets its own OCR
 receipt. Phase completion must preserve commit and session markers.
 
-For an accepted feature followed by accepted `fixup!` remediation commits,
-autosquash the group before beginning another feature. Copy
+When every remediation after an accepted feature uses a `fixup!` subject,
+autosquash the group before beginning another feature. If any remediation is a
+repository-required normal Conventional Commit, keep the reviewed chain linear
+and do not create a history-rewrite receipt. For an all-fixup chain, copy
 `assets/history-rewrite.template.json` and record the original-to-final mapping:
 
 ```bash

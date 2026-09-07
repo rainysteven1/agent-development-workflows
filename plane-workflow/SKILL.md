@@ -226,10 +226,8 @@ conflicts; it never deletes evidence and re-reads every PATCH.
 4. Execute exactly one checklist item through the repository development loop: implement, targeted
    test, real usage when applicable, staged-diff inspection, atomic commit, per-commit OCR and fresh
    time-bounded Luna review, feedback/fix, and evidence. A checklist item may still require several
-   commits. If bounded OCR retry is unavailable and `$long-horizon` applies, preserve the failed
-   manifest and independent fallback review locally, continue only checklist work independent of the
-   unreviewed behavior, and leave that commit's Plane receipt and Phase completion pending until
-   formal OCR recovers.
+   commits. When `$long-horizon` applies, its harness contract owns finding convergence and
+   `degraded` continuation. Plane still leaves missing commit receipts and Phase completion pending.
 5. Update only the local ledger after the item. Record state, commands, results, runtime observations,
    failures, cleanup, and next action. Keep Plane checklist items unchecked while the Phase is open.
 6. Keep failed, blocked, and deferred items visible. A retry must preserve the earliest error,
@@ -246,11 +244,11 @@ Do not PATCH Plane item by item. Do not batch several Phases into one completion
 hardening in the ledger's `延期` section without executing or counting it in the current Phase. A
 Phase boundary neither creates a commit nor triggers review, but every actual material commit inside
 the Phase normally finishes `$dev-loop`'s OCR and fresh-reviewer gate before another planned commit
-begins. The only exception is `$long-horizon` continuation after bounded OCR infrastructure failure:
-preserve the failed manifest and exact-commit fallback review, continue only independent local
-reversible work inside the same active Phase, and leave dependent work, Phase advancement, the formal
-receipt, and Phase completion pending. Do not defer a working review service merely for convenience
-or replace missing receipts at Work Package completion.
+begins. Under `$long-horizon`, use
+[the autonomous harness](../long-horizon/references/harness-contract.md) to continue only work
+independent of a degraded review edge. Preserve the failed manifest and exact-commit fallback review;
+dependent work, Phase advancement, formal receipts, and Phase completion remain pending. Do not defer
+a working review service for convenience or replace missing receipts at Work Package completion.
 
 ## Record Commit Evidence And Close The Work Package
 
@@ -271,14 +269,19 @@ python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-com
 The receipt must name the exact parent and commit SHAs, actual Phase and declared repository, native
 OCR command and manifest metadata, complete file coverage, terminal state, session ID, and every
 finding disposition. A remediation commit is the only allowed next commit while an increment is
-unaccepted; it gets its own OCR receipt. Phase completion preserves these markers. Never reuse a
-session or defer recording until WP closure.
+unaccepted; it gets its own OCR receipt. Explicit `$long-horizon` degraded mode may commit only a
+materially independent local increment after its own fallback review; both commits remain without
+formal acceptance and Phase progress until their OCR receipts exist. Phase completion preserves these
+markers. Never reuse a session or defer a working review service until WP closure.
 
-When an accepted feature commit has one or more accepted `fixup!` remediation
-commits, autosquash that feature group before starting another independent
-feature. Copy `assets/history-rewrite.template.json`, preserve every original
-receipt under its original SHA, and record the content-neutral mapping with
-dry-run then apply:
+When an accepted feature commit's entire remediation chain uses `fixup!`
+subjects, autosquash that feature group before starting another independent
+feature. If any remediation is a repository-required normal Conventional
+Commit, preserve the complete reviewed chain as linear history and do not create
+a history-rewrite receipt. For an all-fixup chain, copy
+`assets/history-rewrite.template.json`, preserve every original receipt under
+its original SHA, and record the content-neutral mapping with dry-run then
+apply:
 
 ```bash
 python ~/.codex/skills/plane-workflow/scripts/plane_workflow.py phase-record-history-rewrite \
