@@ -14,7 +14,9 @@ interrupts; linked workflows must not invent separate retry or approval rules.
 ## Start the run
 
 1. Fix the objective, observable acceptance checks, trust boundaries, affected
-   repositories, and explicitly authorized external actions.
+   repositories, and explicitly authorized external actions. Freeze the current
+   delivery boundary and complexity budget defined in the harness contract before
+   implementation; give the same record to reviewers.
 2. Create or reuse the repository/Plane ledger required by the controlling
    workflow. Initialize and maintain every field in the harness contract's
    durable checkpoint, including failure-detector, finding, evidence, approval,

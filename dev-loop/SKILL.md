@@ -63,6 +63,10 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   target.
 - Record material constraints, explicit non-goals, and uncertain premises.
   Test the cheapest premise most likely to invalidate the direction.
+- For explicit autonomous work, use `$long-horizon`'s current delivery boundary
+  and complexity budget as the scope record shared by implementation and review.
+  Preserve it across increments and compaction; later Phase checklists do not
+  implicitly expand the current slice.
 - Classify the change before selecting optional workflows. A small reversible
   change may proceed from a fixed contract; a material unsettled design uses
   `$create-plan`; a Plane-managed design follows the verified Plane authority;

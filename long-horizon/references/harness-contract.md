@@ -24,6 +24,49 @@ Do not interrupt for a test failure, reviewer finding, retry count, commit or
 Phase boundary, hook-compatible local Git choice, timeout, rate limit, provider
 failure, or optional hardware while a safe in-scope path remains.
 
+## Current delivery boundary and complexity budget
+
+Before implementation, freeze one short scope record in the existing task ledger:
+
+- `must_now`: current observable outcomes and their acceptance IDs;
+- `not_now`: later-Phase work and optional hardening, with reopen conditions;
+- `evidence`: distinguish observed failures, source-proven reachable defects,
+  and unverified hypotheses;
+- `budget`: named owning modules and allowed additions to persistent state,
+  retry layers, abstractions/dependencies, and test scope; and
+- `finish`: the minimum checks and required review coverage that close this slice.
+
+Derive this record from the authorized task and active Phase. A later Phase's
+checklist provides context, not current implementation obligations. Pull a later
+item forward only when a concrete dependency makes current acceptance impossible
+without it; record the dependency and reconcile planning before changing scope.
+Do not silently defer an active acceptance requirement to fit the budget.
+
+Set concrete limits for relevant dimensions before editing, for example: reuse
+the existing job state and retry owner, add no dependency or second queue, and
+verify at the component seam. Omit irrelevant dimensions. Zero new mechanisms is
+the default unless the current contract requires them; name each necessary
+addition and its purpose. This is a design budget, not a universal line-count,
+test-count, or one-retry rule.
+
+Before adding a guard, fallback, retry, state, or fault-injection scenario, map it
+to a current requirement or demonstrated reachable defect and its cheapest check.
+Production incidents are not required: source-level causal proof or a deterministic
+test using a real caller's allowed states is valid evidence. Arbitrary fake-only
+states, imagined future consumers, and unsupported SDK behavior are hypotheses;
+investigate cheaply when material, otherwise defer with a reopen condition.
+
+If implementation or review remediation would exceed the budget, pause that
+addition and re-examine the owning layer and whole root cause. Prefer replacing
+the flawed mechanism over stacking another one. Revise the budget only with new
+evidence and an explanation of why the simpler design cannot meet acceptance;
+renaming or splitting commits does not reset it. Continue local redesign within
+existing authority; ask only at the authority boundary above.
+
+Once the recorded checks and required reviews pass, stop adding tests or
+hardening. Missing receipts require evidence reconciliation, not new behavior or
+repeated accepted reviews. Preserve unresolved required gates as incomplete.
+
 ## Run state
 
 Keep exactly one current state in the durable task ledger:
@@ -91,8 +134,11 @@ bar.
 Deterministic checks run before review. Review is an adversarial sensor, not the
 completion oracle and not an optimizer that must reach zero comments.
 
-Give each reviewer one immutable commit, the frozen acceptance checks, direct
-consumers, trust boundaries, and actual verification. Triage the complete
+Give each reviewer one immutable commit, the frozen scope record and budget,
+direct consumers, trust boundaries, and actual verification. Require findings to
+identify a current requirement or direct regression, reachable trigger, evidence
+class, and cheapest falsifier. Optional improvements remain non-blocking; budget
+pressure never dismisses a demonstrated current defect. Triage the complete
 finding set before editing. Normalize every finding to this identity:
 
 ```text
@@ -139,7 +185,8 @@ an unavailable provider.
 
 Keep enough state to resume without replaying chat history:
 
-- objective and fixed acceptance checks;
+- objective, fixed acceptance checks, and the current scope record including
+  non-goals, evidence classes, complexity budget, and justified budget revisions;
 - repository/worktree, target, current revision, and dirty state;
 - current harness state and current acceptance edge;
 - last action, exact observation, changed variable, strategy ID, current and
@@ -159,6 +206,11 @@ Use these cases when changing the harness:
 
 | Scenario | Decision |
 |---|---|
+| Later Phase lists restart/scale hardening absent from current acceptance | Keep it in `not_now` unless a concrete current dependency is demonstrated. |
+| Fake injects a state no current caller or SDK contract permits | Classify as a hypothesis; do not add production defenses without reachability evidence. |
+| Source proves a current cancellation race without a production incident | Treat it as a real defect; verify at the smallest stable seam. |
+| Remediation proposes a second retry owner beyond the recorded budget | Pause the addition, redesign at the owner, and justify any evidence-driven budget revision. |
+| Checks and reviews pass but a Plane receipt is missing | Reconcile existing evidence; do not expand implementation or repeat accepted review. |
 | Third local remediation fixes a newly proven in-scope mechanism | Continue; the number is not an approval boundary. |
 | Reviewer repeats the same concern with different prose or line | Dismiss by finding identity; do not edit. |
 | Reviewer invents a future caller or stronger threat model | Dismiss out of scope with a reopen condition. |
