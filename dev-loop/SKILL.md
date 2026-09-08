@@ -58,9 +58,9 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
 
 - Restate the user-visible outcome and the narrowest observable checks that
   prove it.
-- Identify affected repositories and the actual integration target for each
-  one. Never infer `main`, and do not assume several repositories share a
-  target.
+- Identify affected repositories. For committed delivery or requested integration,
+  resolve the actual integration target for each one. Never infer `main`, and do
+  not assume several repositories share a target.
 - Record material constraints, explicit non-goals, and uncertain premises.
   Test the cheapest premise most likely to invalidate the direction.
 - For explicit autonomous work, use `$long-horizon`'s current delivery boundary
@@ -73,12 +73,30 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   and a high-risk change explicitly freezes trust boundaries, recovery, and
   rollback evidence.
 
+Choose the delivery mode from the user's request and environment:
+
+- **Committed delivery:** use the per-commit pipeline when the task permits commits in Git.
+- **Verified local delta:** when the user requests no commits or the artifact is outside Git,
+  deliver the verified changes without staging, committing, or inventing a commit receipt.
+  Preserve the starting bytes and a focused before/after diff; record the changed-file content
+  hashes alongside verification so later edits invalidate the affected evidence. A read-only
+  request stays outside this implementation workflow.
+
+An explicitly required commit, integration, or Plane gate remains pending if the user defers its
+prerequisite. Report the completed local scope separately; do not claim that downstream gate passed.
+
 ### 2. Preserve the baseline and isolate the task
+
+Git branch and worktree steps apply only inside Git. Verified-local mode still preserves and
+isolates the user's baseline, but does not require an integration target unless integration is
+part of the requested scope; use the verified task-start revision for local isolation otherwise.
 
 - Capture the task-start branch, status, relevant diffs, and untracked files.
   Treat every pre-existing change as user-owned baseline.
-- Use `$git-workflow-and-versioning` to create or reuse one short-lived task
-  branch per affected repository from the verified target.
+- For committed delivery, use `$git-workflow-and-versioning` to create or reuse one
+  short-lived task branch per affected repository from the verified target. In
+  verified-local mode, retain valid task isolation or isolate from the recorded
+  starting revision without staging or committing the user's baseline.
 - Use `$using-git-worktrees` when the current checkout is dirty, contains
   unrelated work, is on another task branch, or otherwise cannot isolate the
   requested range. Reuse valid existing isolation instead of nesting it.
@@ -102,6 +120,9 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
   comparison instead.
 
 ### 3. Define ordered atomic increments
+
+In verified-local mode, use independently verifiable edit slices instead of planned commits.
+Commit identity, commit ordering, and post-commit index rules apply to committed delivery only.
 
 - Trace the affected flow, direct consumers, and maintained artifacts before
   choosing increments.
@@ -141,6 +162,13 @@ When module ownership, interface placement, or the testing seam is unclear,
 invoke `$codebase-design`. When `$tdd` applies, establish and observe the red
 test at that seam before production changes. These Skills feed this loop; none
 replaces its Git, review, or completion gates.
+
+In verified-local mode, perform steps 1-4 below for each slice, inspect its complete before/after
+delta, and capture the verified content hashes. Skip steps 5-11 and the branch/integration stages
+5-6. Complete applicable cumulative checks and real usage against the final bytes, reconcile
+task-owned temporary resources, and report through the completion gate. Honor an explicitly
+requested development review at this seam; do not turn it into a formal `ocr review --commit`
+receipt or require a commit merely to finish the local request.
 
 1. Implement the smallest acceptance-complete slice using existing repository
    patterns where possible.
@@ -273,12 +301,16 @@ work may continue and what dependent claims remain stopped.
 Report completion only when all applicable pipeline stages passed for the final
 revision. State:
 
-- the target branch and final head
-- the logical commits or, outside Git, the isolated before/after delta
+- the target branch and final head for committed delivery, or starting revision when available
+  and final changed-file content hashes for a verified local delta
+- the logical commits for committed delivery, or the focused before/after delta
+  for verified-local delivery
 - targeted and final verification actually run
 - real usage performed or why it was not applicable
 - adversarial findings and their dispositions when review applies
 - external actions performed and any intentionally unperformed handoff
 
 If a required gate is missing, say the work is not complete and name the first
-unpassed checkpoint. Never convert skipped verification into evidence.
+unpassed checkpoint. Git commit and integration gates are inapplicable to an exclusively
+verified-local request; report that local scope as complete when its checks pass, explicitly
+noting that no commit or integration occurred. Never convert skipped verification into evidence.

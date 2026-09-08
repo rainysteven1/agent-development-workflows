@@ -1,0 +1,61 @@
+{
+  "evaluation": "Supply each request, context, and relevant Skill to a fresh read-only agent without expected_outcome. Ask for its next actions and completion decision. Compare the response to expected_outcome; file validation alone is not a behavior pass.",
+  "cases": [
+    {
+      "id": "local-ocr-receipt",
+      "skills": ["open-code-review"],
+      "request": "Finish reviewing this local fix. Do not publish anything.",
+      "context": "One immutable commit has a complete formal OCR result with full coverage and no open findings. This repository is not managed by Plane.",
+      "expected_outcome": "Preserve the native manifest and local receipt. Complete the local review without requesting Plane IDs, credentials, or any Plane API call."
+    },
+    {
+      "id": "no-commit-fix",
+      "skills": ["dev-loop"],
+      "request": "Fix the CSV escaping bug and verify it, but do not commit or stage anything.",
+      "context": "The isolated Git checkout contains only the requested fix. Relevant tests, real CLI usage, cumulative checks, and diff inspection pass; final changed-file hashes are available. No external gates were requested.",
+      "expected_outcome": "Finish the verified local scope using the starting revision, focused delta, and final content hashes. Do not stage, commit, request an integration target, or require a formal commit receipt."
+    },
+    {
+      "id": "non-git-edit",
+      "skills": ["dev-loop"],
+      "request": "Correct this standalone helper script and verify its output.",
+      "context": "The script is outside Git. Original bytes and the focused diff are preserved. Its requested output and relevant failure path have been verified against the final content hash.",
+      "expected_outcome": "Complete the local edit with before/after and verification evidence. Do not initialize Git, resolve a branch, or require a commit."
+    },
+    {
+      "id": "plane-low-risk",
+      "skills": ["plane-workflow", "open-code-review"],
+      "request": "Finish the current authorized Plane checklist item and record its evidence.",
+      "context": "A low-risk typo correction has passed verification and complete formal OCR. There are no unsupported preview files, high-risk changes, full-context failures, or open findings. The Phase and evidence-update authorization are known.",
+      "expected_outcome": "Record the receipt using dry-run/apply and read-back. Do not add a Luna session merely because the task belongs to Plane."
+    },
+    {
+      "id": "plane-authorization-missing",
+      "skills": ["open-code-review"],
+      "request": "Review the commit locally. Do not change Plane yet.",
+      "context": "The repository is Plane-managed, but evidence updates are not authorized. Formal OCR is complete. The Phase requires a receipt before closure.",
+      "expected_outcome": "Finish the local receipt, leave the external update pending, and do not call Plane apply or close the Phase. Do not reopen the user's explicit no-write decision."
+    },
+    {
+      "id": "deferred-required-gate",
+      "skills": ["dev-loop"],
+      "request": "Prepare the release fix, but leave the commit and release for later.",
+      "context": "Local checks pass. The release contract still requires a committed revision, its formal review, and publication.",
+      "expected_outcome": "Report local preparation complete and release gates pending. Do not claim the release is complete or perform staging, commit, or publication."
+    },
+    {
+      "id": "read-only-routing",
+      "skills": ["dev-loop"],
+      "request": "Investigate why CSV export is broken. Do not edit files.",
+      "context": "Source and logs are available for read-only diagnosis.",
+      "expected_outcome": "Remain on a read-only investigation route. Do not treat verified-local delivery as permission to implement."
+    },
+    {
+      "id": "ocr-entrypoint",
+      "skills": ["open-code-review"],
+      "request": "Use the Skill's default prompt to review the ready change.",
+      "context": "An MR contains three independent commits. Exactly one new atomic commit has just passed ordinary verification; its full parent and commit SHAs are available.",
+      "expected_outcome": "Select the new immutable parent-to-commit delta, preview it, and run formal review. Do not review the whole MR as a substitute."
+    }
+  ]
+}

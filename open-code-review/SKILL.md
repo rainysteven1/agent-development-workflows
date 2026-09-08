@@ -1,6 +1,6 @@
 ---
 name: open-code-review
-description: Use Alibaba OpenCodeReview after ordinary verification and an atomic commit to build a deterministic parent-to-commit file-and-rule manifest, then run a fresh time-bounded Luna adversarial review with complete coverage, structured synthesis, and commit-bound evidence.
+description: Run formal Alibaba OpenCodeReview for one immutable parent-to-commit delta after verification and commit. Record coverage and findings; add a Luna second opinion only under the documented risk or fallback conditions. Uncommitted reviews are development-only.
 ---
 
 # Open Code Review
@@ -197,11 +197,18 @@ independent local increment may continue with the preserved fallback evidence.
 
 ## Commit Receipt And Plane Phase Evidence
 
-For every commit, copy `~/.codex/skills/plane-workflow/assets/commit-review.template.json` to a
-task-owned temporary path. Record the full parent/commit SHAs, OCR version/provider/model/effort,
-session ID, terminal state, preview file statuses, rule fingerprint, native command, and findings
-disposition. Keep the manifest and receipt out of Git, then call `$plane-workflow`'s
-`phase-record-commit-review` dry-run/apply command. Do not defer the OCR verdict until Phase closure.
+For every reviewed commit, preserve the native manifest and a task-local receipt outside Git.
+Record the full parent/commit SHAs, OCR version/provider/model/effort, session ID, terminal state,
+preview file statuses, rule fingerprint, native command, and findings disposition. A task without
+Plane management completes this evidence step locally; it needs no Plane project, credentials,
+Phase, or API call.
+
+Only when Plane manages the task and the user has authorized its evidence updates, use
+`~/.codex/skills/plane-workflow/assets/commit-review.template.json` and call `$plane-workflow`'s
+`phase-record-commit-review` dry-run/apply command. Reuse existing authorization for that scope.
+If a required Plane update lacks authority, finish the local receipt and leave the external gate
+pending. Request missing authorization only when the update is needed for the requested handoff;
+respect an explicit deferral without asking again. Do not defer the OCR verdict until Phase closure.
 
 The Phase command rejects workspace or symbolic revisions, wrong parents, incomplete OCR terminal
 state/coverage, reused session IDs, incomplete synthesis, and undispositioned findings. A fixed finding
@@ -235,8 +242,9 @@ Treat a squash as `history-only` only if all of the following hold:
   rewritten.
 
 Under these conditions, do not invent a new OCR receipt for the final feature
-commit. Preserve the original receipts unchanged and record a Plane Phase
-provenance marker with:
+commit. Preserve the original receipts unchanged and record task-local provenance with the
+fields below. When Plane manages the task, record its Phase provenance marker under the
+same evidence-update authorization boundary above:
 
 - all original reviewed commit SHAs and their parent SHAs;
 - the final squashed commit SHA and its parent SHA;

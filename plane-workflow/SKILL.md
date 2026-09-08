@@ -224,9 +224,10 @@ conflicts; it never deletes evidence and re-reads every PATCH.
    worktree-local stale marker; never treat hook success or a tool's automatic query refresh as Phase
    evidence. Phase evidence requires the maintained blocking refresh/check on a clean exact HEAD.
 4. Execute exactly one checklist item through the repository development loop: implement, targeted
-   test, real usage when applicable, staged-diff inspection, atomic commit, per-commit OCR and fresh
-   time-bounded Luna review, feedback/fix, and evidence. A checklist item may still require several
-   commits. When `$long-horizon` applies, its harness contract owns finding convergence and
+   test, real usage when applicable, staged-diff inspection, atomic commit, per-commit formal OCR,
+   feedback/fix, and evidence. Follow `$open-code-review` for additional review conditions; do not
+   add a Luna second opinion merely because the task is Plane-managed. A checklist item may
+   require several commits. When `$long-horizon` applies, its harness contract owns finding convergence and
    `degraded` continuation. Plane still leaves missing commit receipts and Phase completion pending.
 5. Update only the local ledger after the item. Record state, commands, results, runtime observations,
    failures, cleanup, and next action. Keep Plane checklist items unchecked while the Phase is open.
@@ -243,7 +244,7 @@ conflicts; it never deletes evidence and re-reads every PATCH.
 Do not PATCH Plane item by item. Do not batch several Phases into one completion update. Keep later
 hardening in the ledger's `延期` section without executing or counting it in the current Phase. A
 Phase boundary neither creates a commit nor triggers review, but every actual material commit inside
-the Phase normally finishes `$dev-loop`'s OCR and fresh-reviewer gate before another planned commit
+the Phase normally finishes `$dev-loop`'s formal per-commit OCR gate before another planned commit
 begins. Under `$long-horizon`, use
 [the autonomous harness](../long-horizon/references/harness-contract.md) to continue only work
 independent of a degraded review edge. Preserve the failed manifest and exact-commit fallback review;
