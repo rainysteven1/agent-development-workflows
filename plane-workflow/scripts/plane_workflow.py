@@ -1688,6 +1688,26 @@ def current_git_revision(repository: str) -> str:
     return revision
 
 
+def git_common_directory(repository: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", repository, "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    common_directory = completed.stdout.strip()
+    if completed.returncode != 0 or not common_directory:
+        raise WorkflowError(f"cannot resolve the Git common directory for {repository}")
+    path = Path(common_directory)
+    if not path.is_absolute():
+        path = Path(repository) / path
+    return str(path.resolve())
+
+
+def git_paths_share_common_directory(first: str, second: str) -> bool:
+    return first == second or git_common_directory(first) == git_common_directory(second)
+
+
 def git_commit_chain(
     repository: str, base_revision: str, head_revision: str
 ) -> list[tuple[str, str]]:
@@ -2806,7 +2826,9 @@ def validate_mr_receipt(
                 )
                 if (
                     normalized_review["repository"] != repository
-                    or normalized_review["repository_path"] != repository_path
+                    or not git_paths_share_common_directory(
+                        normalized_review["repository_path"], repository_path
+                    )
                     or normalized_review["parent_revision"] != parent
                     or normalized_review["commit_revision"] != commit
                     or commit_review_marker(normalized_review) not in phase_html
@@ -2828,7 +2850,9 @@ def validate_mr_receipt(
                 )
                 if (
                     normalized_rewrite["repository"] != repository
-                    or normalized_rewrite["repository_path"] != repository_path
+                    or not git_paths_share_common_directory(
+                        normalized_rewrite["repository_path"], repository_path
+                    )
                     or normalized_rewrite["final_commit_revision"] != commit
                     or history_rewrite_marker(normalized_rewrite) not in phase_html
                     or re.search(rewrite_pattern, phase_html) is None

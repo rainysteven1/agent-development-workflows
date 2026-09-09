@@ -1439,6 +1439,9 @@ class PlaneWorkflowTest(unittest.TestCase):
     def test_history_rewrite_record_is_idempotent_and_satisfies_mr_mapping(self) -> None:
         route, client, _, _, _, phases = self._wp_review_fixture()
         rewrite_receipt = self._history_rewrite_receipt()
+        rewrite_receipt["repository_path"] = "/repo/backend-review-worktree"
+        for item in rewrite_receipt["original_commits"]:
+            item["review_receipt"]["repository_path"] = "/repo/backend-review-worktree"
         for item in rewrite_receipt["original_commits"]:
             self._append_review_receipt_marker(phases[0], item["review_receipt"])
         parents = {
@@ -1523,7 +1526,16 @@ class PlaneWorkflowTest(unittest.TestCase):
             plane_workflow, "current_git_revision", return_value="d" * 40
         ), mock.patch.object(
             plane_workflow, "git_repository_slug", return_value="group/backend"
-        ), mock.patch.object(plane_workflow, "git_revision_is_ancestor", return_value=True):
+        ), mock.patch.object(
+            plane_workflow, "git_revision_is_ancestor", return_value=True
+        ), mock.patch.object(
+            plane_workflow,
+            "git_common_directory",
+            side_effect=lambda path: {
+                "/repo/backend-review-worktree": "/git/backend",
+                "/repo/backend": "/git/backend",
+            }[path],
+        ) as common_directory:
             normalized = plane_workflow.validate_mr_receipt(
                 mr_receipt,
                 wp_id="WP-01A",
@@ -1536,6 +1548,7 @@ class PlaneWorkflowTest(unittest.TestCase):
                 },
             )
         self.assertEqual("d" * 40, normalized["merge_requests"][0]["head_revision"])
+        self.assertEqual(2, common_directory.call_count)
 
     def test_mr_mapping_preserves_two_same_repository_features(self) -> None:
         _, _, _, _, _, phases = self._wp_review_fixture()
@@ -1730,6 +1743,57 @@ class PlaneWorkflowTest(unittest.TestCase):
                     current_revisions=revisions,
                     commit_chains=chains,
                 )
+
+    def test_mr_receipt_accepts_review_from_linked_worktree(self) -> None:
+        _, _, _, _, _, phases = self._wp_review_fixture()
+        receipt = self._mr_receipt()
+        review = receipt["merge_requests"][0]["commits"][0]["commit_review_receipt"]
+        review["repository_path"] = "/repo/backend-review-worktree"
+        self._append_mr_receipt_markers(phases, receipt)
+        revisions = {
+            "/repo/backend": "b" * 40,
+            "/repo/backend-review-worktree": "b" * 40,
+            "/repo/frontend": "d" * 40,
+        }
+        chains = {
+            "/repo/backend": [("a" * 40, "b" * 40)],
+            "/repo/frontend": [("c" * 40, "d" * 40)],
+        }
+        parents = {"b" * 40: "a" * 40, "d" * 40: "c" * 40}
+        common_directories = {
+            "/repo/backend": "/git/backend",
+            "/repo/backend-review-worktree": "/git/backend",
+        }
+        with mock.patch.object(
+            plane_workflow, "git_commit_parent", side_effect=lambda _path, commit: parents[commit]
+        ), mock.patch.object(
+            plane_workflow, "current_git_revision", side_effect=lambda path: revisions[path]
+        ), mock.patch.object(
+            plane_workflow,
+            "git_common_directory",
+            side_effect=lambda path: common_directories[path],
+        ):
+            normalized = plane_workflow.validate_mr_receipt(
+                receipt,
+                wp_id="WP-01A",
+                expected_repositories={"group/backend", "group/frontend"},
+                phases=phases,
+                current_revisions=revisions,
+                commit_chains=chains,
+            )
+        self.assertEqual("b" * 40, normalized["merge_requests"][0]["head_revision"])
+
+    def test_git_common_directory_resolves_legacy_relative_output(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="../../shared.git\n", stderr=""
+        )
+        with mock.patch.object(subprocess, "run", return_value=completed) as run:
+            common_directory = plane_workflow.git_common_directory("/repo/worktrees/task")
+        self.assertEqual("/repo/shared.git", common_directory)
+        self.assertEqual(
+            ["git", "-C", "/repo/worktrees/task", "rev-parse", "--git-common-dir"],
+            run.call_args.args[0],
+        )
 
     def test_wp_review_means_mrs_exist_and_done_requires_merged_receipt(self) -> None:
         route, client, module, requirement, work_package, phases = self._wp_review_fixture()
