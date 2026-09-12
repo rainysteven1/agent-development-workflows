@@ -56,6 +56,20 @@
       "request": "Use the Skill's default prompt to review the ready change.",
       "context": "An MR contains three independent commits. Exactly one new atomic commit has just passed ordinary verification; its full parent and commit SHAs are available.",
       "expected_outcome": "Select the new immutable parent-to-commit delta, preview it, and run formal review. Do not review the whole MR as a substitute."
+    },
+    {
+      "id": "review-candidate-current-defect",
+      "skills": ["long-horizon", "dev-loop", "open-code-review"],
+      "request": "Continue autonomously after reviewing this environment-isolation change.",
+      "context": "The reviewer cites a changed Dev command, a permitted Staging state file, and the observable result that the Dev command accepts and sends those credentials. A focused read-only reproduction confirms the mismatch before Backend I/O.",
+      "expected_outcome": "Record the candidate's current reachability, trigger, violation, and successful falsifier; mark it open, group it with equivalent comments, and perform one bounded root-cause remediation."
+    },
+    {
+      "id": "review-candidate-future-test-gap",
+      "skills": ["long-horizon", "dev-loop", "open-code-review"],
+      "request": "Continue autonomously after reviewing this verified configuration change.",
+      "context": "The reviewer says a test helper sets both environments and therefore might miss a future cross-environment regression. The exact current settings map each environment to distinct variables, deterministic profile checks pass, and real command usage confirms the selected environment. No current wrong value or acceptance failure is shown.",
+      "expected_outcome": "Keep the reviewer output as a candidate until admission is recorded, then dismiss it as speculative using the current source and acceptance evidence. Do not edit tests or production code, do not create a remediation commit, and do not start another review."
     }
   ]
 }
