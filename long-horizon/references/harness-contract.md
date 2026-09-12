@@ -146,9 +146,36 @@ finding set before editing. Normalize every finding to this identity:
 ```
 
 Line movement, severity wording, reviewer prose, and narrower timing windows do
-not create a new finding identity. Persist each finding as `open`, `fixed`,
-`dismissed_duplicate`, `dismissed_out_of_scope`, or `dismissed_speculative`,
-plus its evidence and resolving revision when applicable.
+not create a new finding identity. Persist each raw reviewer comment first as
+`candidate`, then as `open`, `fixed`, `dismissed_duplicate`,
+`dismissed_out_of_scope`, or `dismissed_speculative`, plus its evidence and
+resolving revision when applicable.
+
+### Finding admission gate
+
+A reviewer comment never authorizes an edit by itself. Before any reviewer-driven
+code, test, configuration, documentation, or commit mutation, complete one
+read-only admission record for every normalized candidate:
+
+- `current_reachability`: the current caller or accepted requirement that reaches
+  the cited path;
+- `trigger`: the concrete input, state, or interleaving permitted now;
+- `violation`: the observable current-revision acceptance or direct-effect
+  failure, not a possible future regression;
+- `falsifier`: the cheapest source check, existing test, or real-usage probe and
+  its actual result; and
+- `decision`: `open` or one explicit dismissal state.
+
+Do not start an edit, add a test, create a remediation commit, or request another
+review while any candidate lacks this record. Reviewer criticism that a test
+could be stronger, could miss a hypothetical future regression, or does not
+independently prove a value does not establish a current defect when source plus
+existing deterministic or real-usage evidence already proves the accepted
+behavior. Dismiss it with that evidence and do not mutate the repository. If
+current required behavior is wrong, open a product finding; if required
+acceptance evidence is genuinely absent, open an evidence finding and change
+only the smallest owning verification artifact. An evidence finding never
+authorizes unrelated production behavior.
 
 A finding is `open` only when all are present:
 
@@ -192,7 +219,7 @@ Keep enough state to resume without replaying chat history:
 - last action, exact observation, changed variable, strategy ID, current and
   previous normalized failure signatures, consecutive-equivalent count, and
   whether the no-progress nudge was emitted;
-- open finding identities and dispositions;
+- candidate admission records, open finding identities, and dispositions;
 - verification and review evidence bound to immutable revisions;
 - external gates and reusable approval keys; and
 - next safe action.
@@ -214,6 +241,8 @@ Use these cases when changing the harness:
 | Third local remediation fixes a newly proven in-scope mechanism | Continue; the number is not an approval boundary. |
 | Reviewer repeats the same concern with different prose or line | Dismiss by finding identity; do not edit. |
 | Reviewer invents a future caller or stronger threat model | Dismiss out of scope with a reopen condition. |
+| Reviewer says a test would miss a future regression, while current source and acceptance evidence prove the behavior | Dismiss as speculative; do not edit the test and do not start another review. |
+| Reviewer gives a current caller, permitted trigger, observable violation, and a falsifier that reproduces it | Mark `open`, group by root cause, and perform one bounded remediation. |
 | Same command and normalized arguments return the same error | Do not rerun unchanged; change one diagnostic variable. |
 | Two equivalent failures trigger the nudge and the changed strategy fails equivalently | Stop that strategy and return to diagnosis/design. |
 | Formal reviewer fails but tests and independent work remain | Enter `degraded`; preserve evidence and continue independent work. |
