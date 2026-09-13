@@ -7,15 +7,16 @@ description: "Use when the user explicitly wants Codex to work autonomously with
 
 Use the autonomous harness for the full requested scope. Before taking task
 actions, read [references/harness-contract.md](references/harness-contract.md)
-completely. That reference is the single source of truth for execution states,
-progress detection, reviewer convergence, durable evidence, and human
-interrupts; linked workflows must not invent separate retry or approval rules.
+completely. That reference owns execution states, failure detection, reviewer
+convergence mechanics, durable evidence, and human interrupts. It imports
+`dev-loop`'s shared delivery scope and admission contract; linked workflows must
+not invent separate retry or approval rules.
 
 ## Start the run
 
 1. Fix the objective, observable acceptance checks, trust boundaries, affected
    repositories, and explicitly authorized external actions. Freeze the current
-   delivery boundary and complexity budget defined in the harness contract before
+   delivery boundary and complexity budget imported by the harness contract before
    implementation; give the same record to reviewers.
 2. Create or reuse the repository/Plane ledger required by the controlling
    workflow. Initialize and maintain every field in the harness contract's

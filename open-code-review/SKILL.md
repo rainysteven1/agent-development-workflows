@@ -47,16 +47,25 @@ an optional Luna second opinion is selected only for high-risk changes.
 
 ## Bounded finding convergence
 
-Freeze acceptance checks, direct consumers, and trust boundaries in the packet;
-a reviewer cannot widen them. When `$long-horizon` is active, read and use
+Before review or remediation in either mode, read and apply
+[the shared delivery contract](../dev-loop/references/delivery-contract.md).
+Include the final user outcome, current acceptance checks, next outcome check,
+direct consumers, and trust boundaries in the packet; a reviewer cannot widen
+them or turn an intermediate tool into a separate product. Admit the complete
+finding set against that contract before any edit, and charge supporting repair
+cycles to the same outcome rather than resetting them per commit.
+
+When `$long-horizon` is active, read and use
 [../long-horizon/references/harness-contract.md](../long-horizon/references/harness-contract.md)
 for finding identity, complete-set triage, evidence requirements, root-cause
 grouping, remediation convergence, and degraded-mode continuation.
 
-In ordinary mode, use the same evidence test: fix only a demonstrated current
-acceptance/direct-effect violation; dismiss duplicate, out-of-scope, and
-speculative findings with evidence and a reopen condition. Tests and explicit
-acceptance remain the oracle; zero findings is never the loop target.
+Both modes use the shared admission test: only demonstrated current outcome,
+supported-consumer, safety, or required-evidence violations block delivery.
+Disposition optional, duplicate, and speculative suggestions without another
+edit or review. Tests and explicit acceptance remain the oracle; zero findings
+is never the loop target. Provider or OCR faults do not authorize tool repair
+outside the shared contract; required incomplete receipts remain incomplete.
 
 A timeout or interruption may resume the same immutable OCR session once. If
 that resume also fails, preserve the artifacts and return `unavailable`; do not

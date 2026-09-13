@@ -58,15 +58,16 @@ review finding, incomplete commit, or Phase boundary is not a terminal condition
 
 - Restate the user-visible outcome and the narrowest observable checks that
   prove it.
+- Read [references/delivery-contract.md](references/delivery-contract.md) and
+  keep its outcome, supporting-work admission, and cumulative detour record for
+  both ordinary and autonomous tasks. Give reviewers that same record.
 - Identify affected repositories. For committed delivery or requested integration,
   resolve the actual integration target for each one. Never infer `main`, and do
   not assume several repositories share a target.
 - Record material constraints, explicit non-goals, and uncertain premises.
   Test the cheapest premise most likely to invalidate the direction.
-- For explicit autonomous work, use `$long-horizon`'s current delivery boundary
-  and complexity budget as the scope record shared by implementation and review.
-  Preserve it across increments and compaction; later Phase checklists do not
-  implicitly expand the current slice.
+- `$long-horizon` uses this shared delivery contract and adds its run-state and
+  failure-detection mechanics; later Phase checklists do not expand the slice.
 - Classify the change before selecting optional workflows. A small reversible
   change may proceed from a fixed contract; a material unsettled design uses
   `$create-plan`; a Plane-managed design follows the verified Plane authority;
@@ -175,6 +176,8 @@ receipt or require a commit merely to finish the local request.
 2. Run the narrowest relevant automated check. Add or broaden tests when the
    risk surface or repository contract requires it.
 3. Exercise the changed path as a real caller or user when applicable.
+   For a supporting artifact, exercise its consuming outcome path as soon as
+   the prerequisite works; do not wait for optional generality or polish.
 4. Review the increment for scope drift, hidden coupling, generated artifacts,
    security, accessibility, and regressions directly caused by the change.
    For agent-facing instructions, invoke `$writing-for-agents`; for formal
@@ -209,7 +212,9 @@ receipt or require a commit merely to finish the local request.
    ID, and both SHAs. For security, concurrency, migration, or deployment-risk
    changes only, add one fresh Luna second opinion against the same packet; it is
    supplementary and never replaces the OCR verdict.
-10. Disposition every finding. While this increment is not accepted, the only
+10. Apply the shared delivery contract's admission gate to every finding before
+    any edit. Deferred or dismissed suggestions require no remediation or new
+    review. While this increment is not accepted, the only
     permitted next commit is an acceptance-complete remediation commit. Triage
     the complete finding set first, normalize duplicates, and group open findings
     by root cause; do not create one patch per reviewer comment. The remediation
@@ -235,6 +240,11 @@ receipt or require a commit merely to finish the local request.
 root-cause grouping, no-progress detection, and user interruption whenever that
 mode is active. Deterministic acceptance checks, tests, and real usage remain the
 completion oracle; reviewer severity and zero findings do not.
+
+Apply the shared delivery contract's cumulative detour checkpoint even when
+successive comments concern different helper files or failure signatures. A
+locally improving tool can still leave the user's outcome unchanged. Tool
+outages enter bounded recovery; they do not authorize a tool-development task.
 
 When a check fails, stop this increment. Record the earliest actionable error,
 the demonstrated cause or labeled hypothesis, cleanup result, and next changed

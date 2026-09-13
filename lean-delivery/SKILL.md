@@ -7,6 +7,11 @@ description: Select the smallest correct, acceptance-complete implementation by 
 
 Optimize the implementation path without changing the requested outcome. Applicable `AGENTS.md`, fixed acceptance criteria, and repository verification contracts remain authoritative.
 
+Read and apply [the shared delivery contract](../dev-loop/references/delivery-contract.md)
+when selecting scope. Evaluate an intermediate artifact by the final outcome and
+its current supported consumers; do not optimize it into a general-purpose tool.
+Use the contract's admission and cumulative detour checks for supporting work.
+
 ## Select the solution
 
 After reading the task and tracing the affected flow, stop at the first option that satisfies the fixed acceptance criteria and direct effects:

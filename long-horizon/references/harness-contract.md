@@ -26,46 +26,16 @@ failure, or optional hardware while a safe in-scope path remains.
 
 ## Current delivery boundary and complexity budget
 
-Before implementation, freeze one short scope record in the existing task ledger:
+Read and use [the shared delivery contract](../../dev-loop/references/delivery-contract.md)
+before implementation. It owns the outcome/scope record, complexity budget,
+supporting-work admission, cumulative detour checkpoint, and finish boundary for
+both ordinary and autonomous work. Keep that record in this harness's existing
+ledger; do not create a second scope or reset it at a Phase or commit boundary.
 
-- `must_now`: current observable outcomes and their acceptance IDs;
-- `not_now`: later-Phase work and optional hardening, with reopen conditions;
-- `evidence`: distinguish observed failures, source-proven reachable defects,
-  and unverified hypotheses;
-- `budget`: named owning modules and allowed additions to persistent state,
-  retry layers, abstractions/dependencies, and test scope; and
-- `finish`: the minimum checks and required review coverage that close this slice.
-
-Derive this record from the authorized task and active Phase. A later Phase's
-checklist provides context, not current implementation obligations. Pull a later
-item forward only when a concrete dependency makes current acceptance impossible
-without it; record the dependency and reconcile planning before changing scope.
-Do not silently defer an active acceptance requirement to fit the budget.
-
-Set concrete limits for relevant dimensions before editing, for example: reuse
-the existing job state and retry owner, add no dependency or second queue, and
-verify at the component seam. Omit irrelevant dimensions. Zero new mechanisms is
-the default unless the current contract requires them; name each necessary
-addition and its purpose. This is a design budget, not a universal line-count,
-test-count, or one-retry rule.
-
-Before adding a guard, fallback, retry, state, or fault-injection scenario, map it
-to a current requirement or demonstrated reachable defect and its cheapest check.
-Production incidents are not required: source-level causal proof or a deterministic
-test using a real caller's allowed states is valid evidence. Arbitrary fake-only
-states, imagined future consumers, and unsupported SDK behavior are hypotheses;
-investigate cheaply when material, otherwise defer with a reopen condition.
-
-If implementation or review remediation would exceed the budget, pause that
-addition and re-examine the owning layer and whole root cause. Prefer replacing
-the flawed mechanism over stacking another one. Revise the budget only with new
-evidence and an explanation of why the simpler design cannot meet acceptance;
-renaming or splitting commits does not reset it. Continue local redesign within
-existing authority; ask only at the authority boundary above.
-
-Once the recorded checks and required reviews pass, stop adding tests or
-hardening. Missing receipts require evidence reconciliation, not new behavior or
-repeated accepted reviews. Preserve unresolved required gates as incomplete.
+The cumulative detour checkpoint supplements the failure-signature detector
+below: changing helper defects can still leave the same outcome unadvanced.
+Replanning a detour is an internal action; it never creates a permission prompt
+or waives a demonstrated defect or required gate.
 
 ## Run state
 
@@ -153,39 +123,13 @@ resolving revision when applicable.
 
 ### Finding admission gate
 
-A reviewer comment never authorizes an edit by itself. Before any reviewer-driven
-code, test, configuration, documentation, or commit mutation, complete one
-read-only admission record for every normalized candidate:
-
-- `current_reachability`: the current caller or accepted requirement that reaches
-  the cited path;
-- `trigger`: the concrete input, state, or interleaving permitted now;
-- `violation`: the observable current-revision acceptance or direct-effect
-  failure, not a possible future regression;
-- `falsifier`: the cheapest source check, existing test, or real-usage probe and
-  its actual result; and
-- `decision`: `open` or one explicit dismissal state.
-
-Do not start an edit, add a test, create a remediation commit, or request another
-review while any candidate lacks this record. Reviewer criticism that a test
-could be stronger, could miss a hypothetical future regression, or does not
-independently prove a value does not establish a current defect when source plus
-existing deterministic or real-usage evidence already proves the accepted
-behavior. Dismiss it with that evidence and do not mutate the repository. If
-current required behavior is wrong, open a product finding; if required
-acceptance evidence is genuinely absent, open an evidence finding and change
-only the smallest owning verification artifact. An evidence finding never
-authorizes unrelated production behavior.
-
-A finding is `open` only when all are present:
-
-- a current caller or accepted requirement reaches the path;
-- a concrete input, state, or interleaving triggers it;
-- an observable acceptance or direct-effect violation results; and
-- a cheapest falsifier can confirm or reject it.
-
-Missing proof makes the finding speculative until the stated reopen condition
-occurs. Reviewer severity never expands scope.
+Use the shared delivery contract's read-only admission gate for the entire
+candidate set before any edit, added test, remediation commit, or further review.
+Store its record as `outcome_link`, `current_reachability`, `trigger`, `violation`,
+`falsifier` (including actual result), and `decision`. Map admitted product or
+evidence blockers to `open`, and other suggestions to an explicit dismissal
+state with a reopen trigger. A reachable helper concern alone is insufficient;
+preserve the causal link to the final outcome or current supported behavior.
 
 Group all open findings by root cause before changing code. Prefer one coherent
 remediation that fixes the shared cause and its focused tests; do not create one
@@ -214,6 +158,8 @@ Keep enough state to resume without replaying chat history:
 
 - objective, fixed acceptance checks, and the current scope record including
   non-goals, evidence classes, complexity budget, and justified budget revisions;
+- next outcome check, last outcome evidence, cumulative supporting detour count,
+  and the changed approach selected at a detour checkpoint;
 - repository/worktree, target, current revision, and dirty state;
 - current harness state and current acceptance edge;
 - last action, exact observation, changed variable, strategy ID, current and
